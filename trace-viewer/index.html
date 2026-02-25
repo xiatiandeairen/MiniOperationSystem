@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MiniOS Trace Viewer</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>MiniOS Trace Viewer</h1>
+      <div id="drop-zone" class="drop-zone">
+        Drop a <code>.json</code> trace file here or
+        <label for="file-input">browse</label>
+        <input type="file" id="file-input" accept=".json" />
+      </div>
+      <span id="status-msg">Loading sample data…</span>
+    </header>
+
+    <nav id="tab-bar" class="tab-bar">
+      <button class="active" data-tab="waterfall">Waterfall</button>
+      <button data-tab="stats">Stats</button>
+    </nav>
+
+    <div id="waterfall-panel" class="panel">
+      <canvas id="waterfall-canvas"></canvas>
+    </div>
+
+    <div id="stats-panel" class="panel" style="display:none">
+      <div id="stats-body"></div>
+    </div>
+  </div>
+
+  <div id="tooltip"></div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/waterfall.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

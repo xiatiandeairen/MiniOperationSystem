@@ -1,0 +1,7 @@
+/target/
+**/target/
+*.img
+*.bin
+serial.log
+serial-boot.log
+trace-output.log

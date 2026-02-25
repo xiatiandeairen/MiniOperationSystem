@@ -1,0 +1,9 @@
+[package]
+name = "minios-process"
+version = "0.1.0"
+edition = "2021"
+description = "Process and thread management for MiniOS"
+
+[dependencies]
+minios-common = { path = "../common" }
+spin = { workspace = true }

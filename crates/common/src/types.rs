@@ -1,0 +1,226 @@
+//! Shared data types used across kernel subsystems.
+
+use crate::id::{Pid, SpanId, TraceId};
+use core::fmt;
+
+// ---------------------------------------------------------------------------
+// VGA Color
+// ---------------------------------------------------------------------------
+
+/// Standard 16-color VGA palette.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum Color {
+    Black = 0,
+    Blue = 1,
+    Green = 2,
+    Cyan = 3,
+    Red = 4,
+    Magenta = 5,
+    Brown = 6,
+    LightGray = 7,
+    DarkGray = 8,
+    LightBlue = 9,
+    LightGreen = 10,
+    LightCyan = 11,
+    LightRed = 12,
+    Pink = 13,
+    Yellow = 14,
+    White = 15,
+}
+
+/// Packed VGA foreground + background color byte.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct ColorCode(u8);
+
+impl ColorCode {
+    pub const fn new(foreground: Color, background: Color) -> Self {
+        Self((background as u8) << 4 | (foreground as u8))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Process types
+// ---------------------------------------------------------------------------
+
+/// Lifecycle state of a process.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProcessState {
+    Created,
+    Ready,
+    Running,
+    Blocked,
+    Terminated,
+}
+
+impl fmt::Display for ProcessState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Created => write!(f, "CREATED"),
+            Self::Ready => write!(f, "READY"),
+            Self::Running => write!(f, "RUNNING"),
+            Self::Blocked => write!(f, "BLOCKED"),
+            Self::Terminated => write!(f, "TERMINATED"),
+        }
+    }
+}
+
+/// Scheduling priority (lower value = higher priority).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Priority(pub u8);
+
+impl Priority {
+    pub const HIGH: Self = Self(0);
+    pub const MEDIUM: Self = Self(1);
+    pub const LOW: Self = Self(2);
+    pub const IDLE: Self = Self(3);
+}
+
+/// Summary information about a process, suitable for `ps` output.
+#[derive(Debug, Clone)]
+pub struct ProcessInfo {
+    pub pid: Pid,
+    pub state: ProcessState,
+    pub priority: Priority,
+    pub cpu_time_ticks: u64,
+}
+
+/// Reason a process was blocked.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BlockReason {
+    Io,
+    IpcReceive,
+    Sleep,
+    WaitChild,
+}
+
+// ---------------------------------------------------------------------------
+// Scheduler types
+// ---------------------------------------------------------------------------
+
+/// Decision returned by the scheduler after each timer tick.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScheduleDecision {
+    /// Current task keeps running.
+    Continue,
+    /// Switch to the specified task.
+    Switch(Pid),
+    /// No runnable task — enter idle.
+    Idle,
+}
+
+/// Runtime statistics from the scheduler.
+#[derive(Debug, Clone)]
+pub struct SchedulerStats {
+    pub total_switches: u64,
+    pub total_ticks: u64,
+    pub queue_lengths: [usize; 4],
+    pub idle_ticks: u64,
+}
+
+// ---------------------------------------------------------------------------
+// Filesystem types
+// ---------------------------------------------------------------------------
+
+bitflags::bitflags! {
+    /// Flags passed to `open()`.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub struct OpenFlags: u32 {
+        const READ   = 0b0001;
+        const WRITE  = 0b0010;
+        const CREATE = 0b0100;
+        const APPEND = 0b1000;
+    }
+}
+
+/// Origin for `seek()`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SeekWhence {
+    Start,
+    Current,
+    End,
+}
+
+/// Type of an inode (file, directory, device, …).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InodeType {
+    File,
+    Directory,
+    CharDevice,
+    Special,
+}
+
+/// A single directory entry returned by `readdir()`.
+#[derive(Debug, Clone)]
+pub struct DirEntry {
+    pub name: [u8; 255],
+    pub name_len: usize,
+    pub inode_type: InodeType,
+}
+
+/// Metadata about a file or directory.
+#[derive(Debug, Clone)]
+pub struct FileStat {
+    pub size: usize,
+    pub inode_type: InodeType,
+    pub created_at: u64,
+    pub modified_at: u64,
+}
+
+// ---------------------------------------------------------------------------
+// Device driver types
+// ---------------------------------------------------------------------------
+
+/// Broad device classification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeviceType {
+    CharDevice,
+    BlockDevice,
+}
+
+// ---------------------------------------------------------------------------
+// Trace types
+// ---------------------------------------------------------------------------
+
+/// Trace context propagated through the call chain.
+#[derive(Clone, Copy, Debug)]
+pub struct TraceContext {
+    pub trace_id: TraceId,
+    pub current_span_id: SpanId,
+    pub depth: u16,
+}
+
+/// Value stored inside a span attribute.
+#[derive(Clone, Copy, Debug)]
+pub enum AttributeValue {
+    U64(u64),
+    I64(i64),
+    Bool(bool),
+}
+
+/// Completion status of a trace span.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SpanStatus {
+    Ok,
+    Error,
+    InProgress,
+}
+
+/// Runtime statistics of the trace engine.
+#[derive(Debug, Clone)]
+pub struct TraceStats {
+    pub total_spans_written: u64,
+    pub buffer_capacity: usize,
+    pub buffer_used: usize,
+    pub active_spans: usize,
+}
+
+/// Filter criteria for reading spans from the trace buffer.
+#[derive(Debug, Clone, Default)]
+pub struct SpanFilter {
+    pub module: Option<[u8; 32]>,
+    pub trace_id: Option<TraceId>,
+    pub pid: Option<Pid>,
+    pub status: Option<SpanStatus>,
+}

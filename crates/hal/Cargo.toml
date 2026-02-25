@@ -1,0 +1,12 @@
+[package]
+name = "minios-hal"
+version = "0.1.0"
+edition = "2021"
+description = "Hardware abstraction layer for MiniOS"
+
+[dependencies]
+minios-common = { path = "../common" }
+x86_64 = { workspace = true }
+uart_16550 = { workspace = true }
+spin = { workspace = true }
+volatile = { workspace = true }

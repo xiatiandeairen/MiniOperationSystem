@@ -1,0 +1,14 @@
+[package]
+name = "minios-shell"
+version = "0.1.0"
+edition = "2021"
+description = "Interactive terminal shell for MiniOS"
+
+[dependencies]
+minios-common = { path = "../common" }
+minios-hal = { path = "../hal" }
+minios-fs = { path = "../fs" }
+minios-process = { path = "../process" }
+minios-trace = { path = "../trace" }
+minios-memory = { path = "../memory" }
+spin = { workspace = true }

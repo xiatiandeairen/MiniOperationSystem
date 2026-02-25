@@ -1,0 +1,9 @@
+[package]
+name = "minios-scheduler"
+version = "0.1.0"
+edition = "2021"
+description = "MLFQ task scheduler for MiniOS"
+
+[dependencies]
+minios-common = { path = "../common" }
+spin = { workspace = true }

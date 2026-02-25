@@ -1,0 +1,12 @@
+[package]
+name = "minios-syscall"
+version = "0.1.0"
+edition = "2021"
+description = "System call interface for MiniOS"
+
+[dependencies]
+minios-common = { path = "../common" }
+minios-hal = { path = "../hal" }
+minios-process = { path = "../process" }
+minios-scheduler = { path = "../scheduler" }
+spin = { workspace = true }
