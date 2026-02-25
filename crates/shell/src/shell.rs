@@ -7,7 +7,7 @@ use minios_hal::{print, println, serial_println};
 
 /// Tries the PS/2 keyboard first, then falls back to the serial port.
 fn read_char() -> Option<u8> {
-    minios_hal::keyboard::read_key().or_else(|| minios_hal::serial::read_byte())
+    minios_hal::keyboard::read_key().or_else(minios_hal::serial::read_byte)
 }
 
 /// Reads one line of input from the keyboard or serial port, echoing to VGA.
