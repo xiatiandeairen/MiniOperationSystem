@@ -135,10 +135,7 @@ mod tests {
     fn trace_id_display_hex() {
         assert_eq!(format!("{}", TraceId(0)), "0x0000000000000000");
         assert_eq!(format!("{}", TraceId(0xABCD)), "0x000000000000ABCD");
-        assert_eq!(
-            format!("{}", TraceId(u64::MAX)),
-            "0xFFFFFFFFFFFFFFFF"
-        );
+        assert_eq!(format!("{}", TraceId(u64::MAX)), "0xFFFFFFFFFFFFFFFF");
     }
 
     #[test]
