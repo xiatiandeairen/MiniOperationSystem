@@ -8,6 +8,7 @@
 #![feature(abi_x86_interrupt)]
 
 pub mod cpu;
+pub mod framebuffer;
 pub mod gdt;
 pub mod interrupts;
 pub mod keyboard;

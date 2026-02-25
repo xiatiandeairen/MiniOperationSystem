@@ -33,12 +33,36 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     minios_hal::serial_println!("MiniOS: boot sequence started");
 
-    let _boot_span = trace_span!("kernel_boot", module = "boot");
-
-    if let Some(phys_offset) = boot_info.physical_memory_offset.as_ref() {
-        minios_hal::serial_println!("Physical memory offset: {:#x}", phys_offset);
-        minios_hal::vga::init_with_offset(*phys_offset);
+    // Extract framebuffer info before memory init borrows boot_info.
+    // We take the raw pointer to the framebuffer buffer and reconstruct
+    // a slice so that boot_info's borrow is not held when memory::init runs.
+    if let Some(fb) = boot_info.framebuffer.as_mut() {
+        let info = fb.info();
+        let buf = fb.buffer_mut();
+        let ptr = buf.as_mut_ptr();
+        let len = buf.len();
+        // SAFETY: The framebuffer memory is mapped for the entire kernel
+        // lifetime by the bootloader and not aliased by any other code.
+        let static_buf: &'static mut [u8] = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+        unsafe {
+            minios_hal::framebuffer::init(
+                static_buf,
+                info.width,
+                info.height,
+                info.bytes_per_pixel,
+                info.stride,
+            );
+        }
+        minios_hal::serial_println!(
+            "Framebuffer: {}x{} px, {}x{} chars",
+            info.width,
+            info.height,
+            info.width / 8,
+            info.height / 16,
+        );
     }
+
+    let _boot_span = trace_span!("kernel_boot", module = "boot");
 
     minios_hal::println!("Hello, MiniOS!");
 
