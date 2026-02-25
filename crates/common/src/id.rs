@@ -38,7 +38,7 @@ impl fmt::Display for Pid {
 pub struct FileDescriptor(pub i32);
 
 /// Filesystem inode identifier.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct InodeId(pub u64);
 
 /// IPC message queue identifier.

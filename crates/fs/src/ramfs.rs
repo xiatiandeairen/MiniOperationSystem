@@ -1,0 +1,217 @@
+//! In-memory filesystem driver (RamFS).
+//!
+//! Inode-based tree structure backed by a `BTreeMap` protected with a
+//! spin mutex.  Root inode is always `InodeId(0)`.
+
+extern crate alloc;
+
+use alloc::collections::BTreeMap;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::sync::atomic::{AtomicU64, Ordering};
+
+use minios_common::error::FsError;
+use minios_common::id::InodeId;
+use minios_common::traits::fs::FileSystemDriver;
+use minios_common::types::{FileStat, InodeType};
+use spin::Mutex;
+
+/// A single inode stored in the RAM filesystem.
+#[allow(dead_code)]
+struct RamFsInode {
+    id: InodeId,
+    inode_type: InodeType,
+    name: String,
+    data: Vec<u8>,
+    children: Vec<InodeId>,
+    parent: Option<InodeId>,
+    size: usize,
+    created_at: u64,
+    modified_at: u64,
+}
+
+/// In-memory filesystem backed by a `BTreeMap` of inodes.
+pub struct RamFs {
+    inodes: Mutex<BTreeMap<InodeId, RamFsInode>>,
+    next_inode: AtomicU64,
+}
+
+impl Default for RamFs {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl RamFs {
+    /// Creates a new RamFS with a root directory at `InodeId(0)`.
+    pub fn new() -> Self {
+        let mut inodes = BTreeMap::new();
+        let root = RamFsInode {
+            id: InodeId(0),
+            inode_type: InodeType::Directory,
+            name: String::from("/"),
+            data: Vec::new(),
+            children: Vec::new(),
+            parent: None,
+            size: 0,
+            created_at: 0,
+            modified_at: 0,
+        };
+        inodes.insert(InodeId(0), root);
+        Self {
+            inodes: Mutex::new(inodes),
+            next_inode: AtomicU64::new(1),
+        }
+    }
+
+    /// Allocates a fresh inode ID.
+    fn alloc_inode_id(&self) -> InodeId {
+        InodeId(self.next_inode.fetch_add(1, Ordering::Relaxed))
+    }
+
+    /// Shared logic for creating both files and directories.
+    fn create_inode(
+        &self,
+        parent: InodeId,
+        name: &str,
+        inode_type: InodeType,
+    ) -> Result<InodeId, FsError> {
+        let id = self.alloc_inode_id();
+        let mut inodes = self.inodes.lock();
+        validate_parent(&inodes, parent, name)?;
+        let inode = RamFsInode {
+            id,
+            inode_type,
+            name: String::from(name),
+            data: Vec::new(),
+            children: Vec::new(),
+            parent: Some(parent),
+            size: 0,
+            created_at: 0,
+            modified_at: 0,
+        };
+        inodes.insert(id, inode);
+        inodes.get_mut(&parent).unwrap().children.push(id);
+        Ok(id)
+    }
+}
+
+/// Validates that `parent` exists, is a directory, and has no child named `name`.
+fn validate_parent(
+    inodes: &BTreeMap<InodeId, RamFsInode>,
+    parent: InodeId,
+    name: &str,
+) -> Result<(), FsError> {
+    let parent_inode = inodes.get(&parent).ok_or(FsError::NotFound)?;
+    if parent_inode.inode_type != InodeType::Directory {
+        return Err(FsError::NotADirectory);
+    }
+    for &child_id in &parent_inode.children {
+        if let Some(child) = inodes.get(&child_id) {
+            if child.name == name {
+                return Err(FsError::AlreadyExists);
+            }
+        }
+    }
+    Ok(())
+}
+
+impl FileSystemDriver for RamFs {
+    fn name(&self) -> &str {
+        "ramfs"
+    }
+
+    fn create_file(&self, parent: InodeId, name: &str) -> Result<InodeId, FsError> {
+        self.create_inode(parent, name, InodeType::File)
+    }
+
+    fn create_dir(&self, parent: InodeId, name: &str) -> Result<InodeId, FsError> {
+        self.create_inode(parent, name, InodeType::Directory)
+    }
+
+    fn read_data(&self, inode: InodeId, offset: usize, buf: &mut [u8]) -> Result<usize, FsError> {
+        let inodes = self.inodes.lock();
+        let node = inodes.get(&inode).ok_or(FsError::NotFound)?;
+        if node.inode_type != InodeType::File {
+            return Err(FsError::NotAFile);
+        }
+        if offset >= node.data.len() {
+            return Ok(0);
+        }
+        let available = node.data.len() - offset;
+        let to_copy = buf.len().min(available);
+        buf[..to_copy].copy_from_slice(&node.data[offset..offset + to_copy]);
+        Ok(to_copy)
+    }
+
+    fn write_data(&self, inode: InodeId, offset: usize, buf: &[u8]) -> Result<usize, FsError> {
+        let mut inodes = self.inodes.lock();
+        let node = inodes.get_mut(&inode).ok_or(FsError::NotFound)?;
+        if node.inode_type != InodeType::File {
+            return Err(FsError::NotAFile);
+        }
+        let end = offset + buf.len();
+        if end > node.data.len() {
+            node.data.resize(end, 0);
+        }
+        node.data[offset..end].copy_from_slice(buf);
+        node.size = node.data.len();
+        Ok(buf.len())
+    }
+
+    fn lookup(&self, parent: InodeId, name: &str) -> Result<InodeId, FsError> {
+        let inodes = self.inodes.lock();
+        let parent_inode = inodes.get(&parent).ok_or(FsError::NotFound)?;
+        if parent_inode.inode_type != InodeType::Directory {
+            return Err(FsError::NotADirectory);
+        }
+        for &child_id in &parent_inode.children {
+            if let Some(child) = inodes.get(&child_id) {
+                if child.name == name {
+                    return Ok(child_id);
+                }
+            }
+        }
+        Err(FsError::NotFound)
+    }
+
+    fn remove(&self, parent: InodeId, name: &str) -> Result<(), FsError> {
+        let mut inodes = self.inodes.lock();
+        let child_id = find_child(&inodes, parent, name)?;
+        inodes
+            .get_mut(&parent)
+            .unwrap()
+            .children
+            .retain(|&id| id != child_id);
+        inodes.remove(&child_id);
+        Ok(())
+    }
+
+    fn stat(&self, inode: InodeId) -> Result<FileStat, FsError> {
+        let inodes = self.inodes.lock();
+        let node = inodes.get(&inode).ok_or(FsError::NotFound)?;
+        Ok(FileStat {
+            size: node.size,
+            inode_type: node.inode_type,
+            created_at: node.created_at,
+            modified_at: node.modified_at,
+        })
+    }
+}
+
+/// Finds a child inode by name within a parent directory.
+fn find_child(
+    inodes: &BTreeMap<InodeId, RamFsInode>,
+    parent: InodeId,
+    name: &str,
+) -> Result<InodeId, FsError> {
+    let parent_inode = inodes.get(&parent).ok_or(FsError::NotFound)?;
+    for &child_id in &parent_inode.children {
+        if let Some(child) = inodes.get(&child_id) {
+            if child.name == name {
+                return Ok(child_id);
+            }
+        }
+    }
+    Err(FsError::NotFound)
+}
