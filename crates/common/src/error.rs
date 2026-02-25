@@ -233,30 +233,63 @@ mod tests {
 
     #[test]
     fn memory_error_display() {
-        assert_eq!(format!("{}", MemoryError::OutOfMemory), "out of physical memory");
-        assert_eq!(format!("{}", MemoryError::InvalidAddress), "invalid address");
-        assert_eq!(format!("{}", MemoryError::AlreadyMapped), "page already mapped");
+        assert_eq!(
+            format!("{}", MemoryError::OutOfMemory),
+            "out of physical memory"
+        );
+        assert_eq!(
+            format!("{}", MemoryError::InvalidAddress),
+            "invalid address"
+        );
+        assert_eq!(
+            format!("{}", MemoryError::AlreadyMapped),
+            "page already mapped"
+        );
         assert_eq!(format!("{}", MemoryError::NotMapped), "page not mapped");
-        assert_eq!(format!("{}", MemoryError::AlignmentError), "address alignment error");
+        assert_eq!(
+            format!("{}", MemoryError::AlignmentError),
+            "address alignment error"
+        );
     }
 
     #[test]
     fn process_error_display() {
-        assert_eq!(format!("{}", ProcessError::MaxProcessesReached), "max processes reached");
+        assert_eq!(
+            format!("{}", ProcessError::MaxProcessesReached),
+            "max processes reached"
+        );
         assert_eq!(format!("{}", ProcessError::InvalidPid), "invalid pid");
-        assert_eq!(format!("{}", ProcessError::ProcessNotFound), "process not found");
-        assert_eq!(format!("{}", ProcessError::InvalidStateTransition), "invalid state transition");
-        assert_eq!(format!("{}", ProcessError::StackAllocationFailed), "stack allocation failed");
+        assert_eq!(
+            format!("{}", ProcessError::ProcessNotFound),
+            "process not found"
+        );
+        assert_eq!(
+            format!("{}", ProcessError::InvalidStateTransition),
+            "invalid state transition"
+        );
+        assert_eq!(
+            format!("{}", ProcessError::StackAllocationFailed),
+            "stack allocation failed"
+        );
     }
 
     #[test]
     fn fs_error_display() {
         assert_eq!(format!("{}", FsError::NotFound), "not found");
         assert_eq!(format!("{}", FsError::AlreadyExists), "already exists");
-        assert_eq!(format!("{}", FsError::PermissionDenied), "permission denied");
+        assert_eq!(
+            format!("{}", FsError::PermissionDenied),
+            "permission denied"
+        );
         assert_eq!(format!("{}", FsError::NoSpace), "no space");
-        assert_eq!(format!("{}", FsError::TooManyOpenFiles), "too many open files");
-        assert_eq!(format!("{}", FsError::InvalidDescriptor), "invalid descriptor");
+        assert_eq!(
+            format!("{}", FsError::TooManyOpenFiles),
+            "too many open files"
+        );
+        assert_eq!(
+            format!("{}", FsError::InvalidDescriptor),
+            "invalid descriptor"
+        );
     }
 
     #[test]
@@ -268,16 +301,31 @@ mod tests {
 
     #[test]
     fn driver_error_display() {
-        assert_eq!(format!("{}", DriverError::NotInitialized), "not initialized");
-        assert_eq!(format!("{}", DriverError::DeviceNotFound), "device not found");
+        assert_eq!(
+            format!("{}", DriverError::NotInitialized),
+            "not initialized"
+        );
+        assert_eq!(
+            format!("{}", DriverError::DeviceNotFound),
+            "device not found"
+        );
         assert_eq!(format!("{}", DriverError::IoError), "I/O error");
-        assert_eq!(format!("{}", DriverError::Unsupported), "unsupported operation");
+        assert_eq!(
+            format!("{}", DriverError::Unsupported),
+            "unsupported operation"
+        );
     }
 
     #[test]
     fn trace_error_display() {
         assert_eq!(format!("{}", TraceError::BufferFull), "trace buffer full");
-        assert_eq!(format!("{}", TraceError::MaxDepthExceeded), "max trace depth exceeded");
-        assert_eq!(format!("{}", TraceError::NotInitialized), "tracer not initialized");
+        assert_eq!(
+            format!("{}", TraceError::MaxDepthExceeded),
+            "max trace depth exceeded"
+        );
+        assert_eq!(
+            format!("{}", TraceError::NotInitialized),
+            "tracer not initialized"
+        );
     }
 }
