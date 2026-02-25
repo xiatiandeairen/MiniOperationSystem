@@ -6,7 +6,7 @@
 
 use crate::gdt;
 use crate::pic::ChainedPics;
-use core::sync::atomic::{AtomicU64, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use spin::{Lazy, Mutex};
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 
@@ -48,9 +48,23 @@ impl InterruptIndex {
 /// Monotonic tick counter incremented by the timer interrupt handler.
 static TICK_COUNT: AtomicU64 = AtomicU64::new(0);
 
+/// Whether the timer tick callback is installed.
+static TIMER_CALLBACK_SET: AtomicBool = AtomicBool::new(false);
+
+/// Optional callback invoked on every timer tick (after incrementing count).
+static TIMER_CALLBACK: Mutex<Option<fn()>> = Mutex::new(None);
+
 /// Returns the number of timer ticks since boot.
 pub fn tick_count() -> u64 {
     TICK_COUNT.load(Ordering::Relaxed)
+}
+
+/// Registers a function to be called on every timer interrupt.
+///
+/// Only one callback is supported; later calls overwrite earlier ones.
+pub fn set_timer_callback(cb: fn()) {
+    *TIMER_CALLBACK.lock() = Some(cb);
+    TIMER_CALLBACK_SET.store(true, Ordering::Release);
 }
 
 /// The Interrupt Descriptor Table, lazily initialised.
@@ -119,6 +133,13 @@ extern "x86-interrupt" fn general_protection_fault_handler(
 
 extern "x86-interrupt" fn timer_handler(_stack_frame: InterruptStackFrame) {
     TICK_COUNT.fetch_add(1, Ordering::Relaxed);
+
+    if TIMER_CALLBACK_SET.load(Ordering::Acquire) {
+        if let Some(cb) = *TIMER_CALLBACK.lock() {
+            cb();
+        }
+    }
+
     // SAFETY: We are inside the timer ISR for this vector.
     unsafe {
         PICS.lock()
@@ -131,7 +152,10 @@ extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame) {
     let mut port = Port::new(0x60);
     // SAFETY: Reading port 0x60 retrieves the keyboard scancode and
     // is required to acknowledge the keyboard interrupt.
-    let _scancode: u8 = unsafe { port.read() };
+    let scancode: u8 = unsafe { port.read() };
+
+    crate::keyboard::handle_scancode(scancode);
+
     // SAFETY: We are inside the keyboard ISR for this vector.
     unsafe {
         PICS.lock()
