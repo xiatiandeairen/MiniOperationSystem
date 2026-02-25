@@ -167,18 +167,17 @@ pub fn clear_screen() {
 
 /// Writes formatted arguments to the display (implementation detail).
 ///
-/// Routes to the framebuffer console if available, otherwise to VGA text buffer.
-/// Interrupts are disabled for the duration to prevent deadlocks.
+/// Routes to the framebuffer console if available, otherwise falls back to
+/// VGA text buffer. Only one path is used to avoid double-output.
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use fmt::Write;
     x86_64::instructions::interrupts::without_interrupts(|| {
-        // Prefer framebuffer console (always works with bootloader_api v0.11)
         if let Some(ref mut fb) = *crate::framebuffer::CONSOLE.lock() {
             let _ = fb.write_fmt(args);
+        } else {
+            let _ = WRITER.lock().write_fmt(args);
         }
-        // Also write to VGA text buffer (works if physical memory is mapped)
-        let _ = WRITER.lock().write_fmt(args);
     });
 }
 
