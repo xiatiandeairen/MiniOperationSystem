@@ -9,3 +9,4 @@ minios-common = { path = "../common" }
 x86_64 = { workspace = true }
 spin = { workspace = true }
 linked_list_allocator = { workspace = true }
+bootloader_api = { workspace = true }
