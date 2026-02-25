@@ -10,6 +10,8 @@ use minios_common::id::Pid;
 use minios_common::traits::fs::FileSystem;
 use minios_common::traits::memory::{FrameAllocator, HeapAllocator};
 use minios_common::types::{OpenFlags, Priority, ProcessState, ScheduleDecision};
+use minios_common::traits::trace::Tracer;
+use minios_trace::{trace_event, trace_span};
 
 /// Map the complete physical memory so we can access VGA buffer at 0xB8000.
 /// Stack is increased from the default 80 KiB to 512 KiB to accommodate
@@ -24,11 +26,14 @@ const CONFIG: BootloaderConfig = {
 entry_point!(kernel_main, config = &CONFIG);
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    // HAL init (before trace is usable)
     minios_hal::gdt::init();
     minios_hal::interrupts::init_idt();
     minios_hal::serial::init();
 
     minios_hal::serial_println!("MiniOS: boot sequence started");
+
+    let _boot_span = trace_span!("kernel_boot", module = "boot");
 
     if let Some(phys_offset) = boot_info.physical_memory_offset.as_ref() {
         minios_hal::serial_println!("Physical memory offset: {:#x}", phys_offset);
@@ -37,30 +42,46 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     minios_hal::println!("Hello, MiniOS!");
 
-    let mem = minios_memory::init(boot_info).expect("memory init failed");
-
-    minios_hal::serial_println!(
-        "Memory: total frames = {}, free frames = {}",
-        mem.frame_allocator.total_frame_count(),
-        mem.frame_allocator.free_frame_count()
-    );
-    minios_hal::serial_println!(
-        "Heap: used = {} bytes, free = {} bytes",
-        mem.heap.used_bytes(),
-        mem.heap.free_bytes()
-    );
+    let mem = {
+        let _mem_span = trace_span!("memory_init", module = "memory");
+        let m = minios_memory::init(boot_info).expect("memory init failed");
+        minios_hal::serial_println!(
+            "Memory: total frames = {}, free frames = {}",
+            m.frame_allocator.total_frame_count(),
+            m.frame_allocator.free_frame_count()
+        );
+        minios_hal::serial_println!(
+            "Heap: used = {} bytes, free = {} bytes",
+            m.heap.used_bytes(),
+            m.heap.free_bytes()
+        );
+        m
+    };
 
     let v = vec![1, 2, 3];
     minios_hal::serial_println!("heap works: {:?}", v);
 
     mem.publish_stats();
 
-    init_filesystem();
+    {
+        let _fs_span = trace_span!("filesystem_init", module = "fs");
+        init_filesystem();
+    }
 
-    test_syscalls();
-    test_ipc();
+    {
+        let _syscall_span = trace_span!("syscall_test", module = "syscall");
+        test_syscalls();
+    }
 
-    init_processes();
+    {
+        let _ipc_span = trace_span!("ipc_test", module = "ipc");
+        test_ipc();
+    }
+
+    {
+        let _proc_span = trace_span!("process_init", module = "process");
+        init_processes();
+    }
 
     minios_hal::println!("Boot successful. System ready.");
     minios_hal::serial_println!("MiniOS: VGA output written");
@@ -144,6 +165,7 @@ fn print_process_list() {
 
 /// Timer tick callback — drives the scheduler.
 fn on_timer_tick() {
+    trace_event!("timer_tick");
     let ticks = minios_hal::interrupts::tick_count();
     let current = minios_process::manager::current_pid();
     minios_process::manager::tick_cpu_time(current);
