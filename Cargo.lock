@@ -116,6 +116,7 @@ dependencies = [
 name = "minios-memory"
 version = "0.1.0"
 dependencies = [
+ "bootloader_api",
  "linked_list_allocator",
  "minios-common",
  "spin",
