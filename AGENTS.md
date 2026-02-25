@@ -42,6 +42,20 @@ All tasks are defined in `Makefile.toml`. Run via `cargo make <task>`:
 - `build-std` flags are **not** in `.cargo/config.toml`; they must be passed
   on the command line (the `Makefile.toml` tasks handle this automatically via
   `cargo make build` / `cargo make clippy`).
+- **Stack overflow in debug builds**: The default bootloader kernel stack is
+  80 KiB, which is too small for the memory subsystem's bitmap frame allocator
+  (8 KiB `BitmapInner` struct) combined with x86_64 page table operations in
+  debug mode. The kernel `BootloaderConfig` sets `kernel_stack_size = 512 KiB`.
+  If you add subsystems with large stack frames, watch for double faults during
+  boot — they almost always indicate stack overflow.
+- **QEMU boot testing**: Use the `boot-image` tool then QEMU directly, not
+  `cargo make run` (the Makefile's `run` task references a stale image name).
+  Correct command sequence:
+  ```
+  cargo make build
+  ./tools/boot-image/target/x86_64-unknown-linux-gnu/release/boot-image target/x86_64-unknown-none/debug/minios-kernel
+  timeout 15 qemu-system-x86_64 -drive format=raw,file=target/x86_64-unknown-none/debug/minios-bios.img -nographic -m 256M -no-reboot -no-shutdown
+  ```
 
 ### Development workflow
 
