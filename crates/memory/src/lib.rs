@@ -13,10 +13,22 @@ pub mod paging;
 
 use bootloader_api::BootInfo;
 use minios_common::error::MemoryError;
+use spin::Mutex;
 
 use frame::BitmapFrameAllocator;
 use heap::KernelHeapAllocator;
 use paging::PageTableManager;
+
+/// Snapshot of memory statistics for read-only consumption by the shell.
+pub struct MemoryStats {
+    pub free_frames: usize,
+    pub total_frames: usize,
+    pub heap_used: usize,
+    pub heap_free: usize,
+}
+
+/// Global memory stats snapshot, populated after init.
+pub static MEMORY_STATS: Mutex<Option<MemoryStats>> = Mutex::new(None);
 
 /// Aggregate handle for all memory-management state.
 pub struct MemoryManager {
@@ -26,6 +38,19 @@ pub struct MemoryManager {
     pub page_table_manager: PageTableManager,
     /// Heap statistics handle.
     pub heap: KernelHeapAllocator,
+}
+
+impl MemoryManager {
+    /// Captures a snapshot of current memory stats into the global static.
+    pub fn publish_stats(&self) {
+        use minios_common::traits::memory::{FrameAllocator, HeapAllocator};
+        *MEMORY_STATS.lock() = Some(MemoryStats {
+            free_frames: self.frame_allocator.free_frame_count(),
+            total_frames: self.frame_allocator.total_frame_count(),
+            heap_used: self.heap.used_bytes(),
+            heap_free: self.heap.free_bytes(),
+        });
+    }
 }
 
 /// Initialises the complete memory subsystem.
