@@ -136,3 +136,89 @@ fn read_tsc() -> u64 {
         0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use minios_common::id::{SpanId, TraceId};
+
+    #[test]
+    fn span_new_fields() {
+        let span = Span::new(
+            "my_op",
+            "kernel::mem",
+            TraceId(100),
+            SpanId(7),
+            Some(SpanId(3)),
+            42,
+            2,
+        );
+        assert_eq!(span.trace_id, TraceId(100));
+        assert_eq!(span.span_id, SpanId(7));
+        assert_eq!(span.parent_span_id, Some(SpanId(3)));
+        assert_eq!(span.pid, 42);
+        assert_eq!(span.depth, 2);
+        assert_eq!(span.status, SpanStatus::InProgress);
+        assert_eq!(span.end_tsc, 0);
+    }
+
+    #[test]
+    fn name_str_returns_correct_slice() {
+        let span = Span::new("hello", "mod", TraceId(1), SpanId(1), None, 0, 0);
+        assert_eq!(span.name_str(), "hello");
+    }
+
+    #[test]
+    fn module_str_returns_correct_slice() {
+        let span = Span::new("op", "scheduler", TraceId(1), SpanId(1), None, 0, 0);
+        assert_eq!(span.module_str(), "scheduler");
+    }
+
+    #[test]
+    fn name_truncation() {
+        let long_name = "a]".repeat(MAX_NAME_LEN + 10);
+        let span = Span::new(&long_name, "m", TraceId(1), SpanId(1), None, 0, 0);
+        assert_eq!(span.name_len, MAX_NAME_LEN);
+        assert_eq!(span.name_str().len(), MAX_NAME_LEN);
+    }
+
+    #[test]
+    fn module_truncation() {
+        let long_mod = "b".repeat(MAX_MODULE_LEN + 20);
+        let span = Span::new("op", &long_mod, TraceId(1), SpanId(1), None, 0, 0);
+        assert_eq!(span.module_len, MAX_MODULE_LEN);
+        assert_eq!(span.module_str().len(), MAX_MODULE_LEN);
+    }
+
+    #[test]
+    fn empty_name_and_module() {
+        let span = Span::new("", "", TraceId(1), SpanId(1), None, 0, 0);
+        assert_eq!(span.name_str(), "");
+        assert_eq!(span.module_str(), "");
+        assert_eq!(span.name_len, 0);
+        assert_eq!(span.module_len, 0);
+    }
+
+    #[test]
+    fn default_span() {
+        let span = Span::default();
+        assert_eq!(span.trace_id, TraceId(0));
+        assert_eq!(span.span_id, SpanId(0));
+        assert_eq!(span.parent_span_id, None);
+        assert_eq!(span.name_str(), "");
+        assert_eq!(span.module_str(), "");
+        assert_eq!(span.status, SpanStatus::InProgress);
+    }
+
+    #[test]
+    fn clone_preserves_fields() {
+        let span = Span::new("cloned", "test", TraceId(9), SpanId(4), None, 1, 3);
+        let copy = span.clone();
+        assert_eq!(copy.trace_id, span.trace_id);
+        assert_eq!(copy.span_id, span.span_id);
+        assert_eq!(copy.name_str(), span.name_str());
+        assert_eq!(copy.module_str(), span.module_str());
+        assert_eq!(copy.pid, span.pid);
+        assert_eq!(copy.depth, span.depth);
+    }
+}

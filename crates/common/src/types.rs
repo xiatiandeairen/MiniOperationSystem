@@ -224,3 +224,76 @@ pub struct SpanFilter {
     pub pid: Option<Pid>,
     pub status: Option<SpanStatus>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    extern crate alloc;
+    use alloc::format;
+
+    #[test]
+    fn color_code_packs_correctly() {
+        let cc = ColorCode::new(Color::White, Color::Blue);
+        assert_eq!(cc, ColorCode(0x1F));
+    }
+
+    #[test]
+    fn color_code_black_on_black() {
+        let cc = ColorCode::new(Color::Black, Color::Black);
+        assert_eq!(cc, ColorCode(0x00));
+    }
+
+    #[test]
+    fn color_code_white_on_white() {
+        let cc = ColorCode::new(Color::White, Color::White);
+        assert_eq!(cc, ColorCode(0xFF));
+    }
+
+    #[test]
+    fn priority_ordering() {
+        assert!(Priority::HIGH < Priority::LOW);
+        assert!(Priority::HIGH < Priority::MEDIUM);
+        assert!(Priority::MEDIUM < Priority::LOW);
+        assert!(Priority::LOW < Priority::IDLE);
+    }
+
+    #[test]
+    fn process_state_display() {
+        assert_eq!(format!("{}", ProcessState::Created), "CREATED");
+        assert_eq!(format!("{}", ProcessState::Running), "RUNNING");
+        assert_eq!(format!("{}", ProcessState::Terminated), "TERMINATED");
+    }
+
+    #[test]
+    fn open_flags_bitwise() {
+        let flags = OpenFlags::READ | OpenFlags::WRITE;
+        assert!(flags.contains(OpenFlags::READ));
+        assert!(flags.contains(OpenFlags::WRITE));
+        assert!(!flags.contains(OpenFlags::CREATE));
+        assert!(!flags.contains(OpenFlags::APPEND));
+    }
+
+    #[test]
+    fn open_flags_all() {
+        let all = OpenFlags::READ | OpenFlags::WRITE | OpenFlags::CREATE | OpenFlags::APPEND;
+        assert!(all.contains(OpenFlags::READ));
+        assert!(all.contains(OpenFlags::CREATE));
+    }
+
+    #[test]
+    fn open_flags_empty() {
+        let empty = OpenFlags::empty();
+        assert!(!empty.contains(OpenFlags::READ));
+    }
+
+    #[test]
+    fn schedule_decision_variants() {
+        let cont = ScheduleDecision::Continue;
+        let sw = ScheduleDecision::Switch(Pid(5));
+        let idle = ScheduleDecision::Idle;
+        assert_eq!(cont, ScheduleDecision::Continue);
+        assert_eq!(sw, ScheduleDecision::Switch(Pid(5)));
+        assert_ne!(sw, ScheduleDecision::Switch(Pid(6)));
+        assert_eq!(idle, ScheduleDecision::Idle);
+    }
+}

@@ -113,3 +113,160 @@ impl RingBuffer {
         false
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    extern crate alloc;
+    use alloc::boxed::Box;
+    use minios_common::id::{SpanId, TraceId};
+    use minios_common::types::SpanStatus;
+
+    fn default_spans<const N: usize>() -> [Span; N] {
+        core::array::from_fn(|_| Span::default())
+    }
+
+    fn make_span(id: u64) -> Span {
+        let mut s = Span::default();
+        s.span_id = SpanId(id);
+        s.trace_id = TraceId(id);
+        s
+    }
+
+    #[test]
+    fn write_and_read_recent() {
+        let mut rb = Box::new(RingBuffer::new());
+        rb.write(make_span(1));
+        rb.write(make_span(2));
+        rb.write(make_span(3));
+
+        let mut out = default_spans::<3>();
+        let n = rb.read_recent(3, &mut out);
+        assert_eq!(n, 3);
+        assert_eq!(out[0].span_id, SpanId(1));
+        assert_eq!(out[1].span_id, SpanId(2));
+        assert_eq!(out[2].span_id, SpanId(3));
+    }
+
+    #[test]
+    fn read_recent_fewer_than_available() {
+        let mut rb = Box::new(RingBuffer::new());
+        rb.write(make_span(10));
+        rb.write(make_span(20));
+        rb.write(make_span(30));
+
+        let mut out = default_spans::<2>();
+        let n = rb.read_recent(2, &mut out);
+        assert_eq!(n, 2);
+        assert_eq!(out[0].span_id, SpanId(20));
+        assert_eq!(out[1].span_id, SpanId(30));
+    }
+
+    #[test]
+    fn read_recent_more_than_available() {
+        let mut rb = Box::new(RingBuffer::new());
+        rb.write(make_span(1));
+
+        let mut out = default_spans::<4>();
+        let n = rb.read_recent(4, &mut out);
+        assert_eq!(n, 1);
+        assert_eq!(out[0].span_id, SpanId(1));
+    }
+
+    #[test]
+    fn wrap_around_overwrites_oldest() {
+        let mut rb = Box::new(RingBuffer::new());
+        for i in 0..(RING_CAPACITY as u64 + 5) {
+            rb.write(make_span(i));
+        }
+
+        let mut out = default_spans::<3>();
+        let n = rb.read_recent(3, &mut out);
+        assert_eq!(n, 3);
+        let last_id = RING_CAPACITY as u64 + 4;
+        assert_eq!(out[2].span_id, SpanId(last_id));
+        assert_eq!(out[1].span_id, SpanId(last_id - 1));
+        assert_eq!(out[0].span_id, SpanId(last_id - 2));
+    }
+
+    #[test]
+    fn clear_resets_counters() {
+        let mut rb = Box::new(RingBuffer::new());
+        rb.write(make_span(1));
+        rb.write(make_span(2));
+
+        let (_, used_before, total_before) = rb.stats();
+        assert_eq!(used_before, 2);
+        assert_eq!(total_before, 2);
+
+        rb.clear();
+
+        let (cap, used, total) = rb.stats();
+        assert_eq!(cap, RING_CAPACITY);
+        assert_eq!(used, 0);
+        assert_eq!(total, 0);
+    }
+
+    #[test]
+    fn update_span_finds_and_updates() {
+        let mut rb = Box::new(RingBuffer::new());
+        rb.write(make_span(10));
+        rb.write(make_span(20));
+        rb.write(make_span(30));
+
+        let found = rb.update_span(SpanId(20), 9999, SpanStatus::Ok);
+        assert!(found);
+
+        let mut out = default_spans::<3>();
+        rb.read_recent(3, &mut out);
+        let updated = out.iter().find(|s| s.span_id == SpanId(20)).unwrap();
+        assert_eq!(updated.end_tsc, 9999);
+        assert_eq!(updated.status, SpanStatus::Ok);
+    }
+
+    #[test]
+    fn update_span_not_found() {
+        let mut rb = Box::new(RingBuffer::new());
+        rb.write(make_span(1));
+        let found = rb.update_span(SpanId(999), 100, SpanStatus::Error);
+        assert!(!found);
+    }
+
+    #[test]
+    fn stats_accuracy() {
+        let mut rb = Box::new(RingBuffer::new());
+        let (cap, used, total) = rb.stats();
+        assert_eq!(cap, RING_CAPACITY);
+        assert_eq!(used, 0);
+        assert_eq!(total, 0);
+
+        for i in 0..10u64 {
+            rb.write(make_span(i));
+        }
+        let (cap, used, total) = rb.stats();
+        assert_eq!(cap, RING_CAPACITY);
+        assert_eq!(used, 10);
+        assert_eq!(total, 10);
+    }
+
+    #[test]
+    fn stats_after_wrap() {
+        let mut rb = Box::new(RingBuffer::new());
+        let count = RING_CAPACITY + 50;
+        for i in 0..count as u64 {
+            rb.write(make_span(i));
+        }
+        let (cap, used, total) = rb.stats();
+        assert_eq!(cap, RING_CAPACITY);
+        assert_eq!(used, RING_CAPACITY);
+        assert_eq!(total, count as u64);
+    }
+
+    #[test]
+    fn empty_read() {
+        let rb = Box::new(RingBuffer::new());
+        let mut out = default_spans::<2>();
+        let n = rb.read_recent(2, &mut out);
+        assert_eq!(n, 0);
+    }
+}
