@@ -49,37 +49,96 @@
 ├─ 2. cargo test 是否通过？不通过则先修复
 ├─ 3. cargo clippy 是否通过？不通过则先修复
 ├─ 4. 上一个任务的验收标准是否全部满足？
-├─ 5. 当前模块的代码是否需要重构？
+├─ 5. 结构性健康检查（任一不满足 → 先重构再开始新任务）
 │     ├─ 函数超过 50 行？→ 拆分
-│     ├─ 重复代码 > 3 处？→ 抽取公共模块
+│     ├─ 重复代码 > 2 处？→ 抽取公共模块
 │     ├─ 模块文件超过 500 行？→ 拆分子模块
 │     ├─ TODO/FIXME 累计 > 5 个？→ 清理
-│     └─ 公开接口缺少文档？→ 补充
-└─ 6. 重构需求存在？→ 先完成重构 commit，再开始新任务
+│     ├─ 公开接口缺少文档？→ 补充
+│     └─ 当前文件 Hotspot RiskScore > 0.6？→ 按 §1.8 执行 P0 重构
+├─ 6. 命名可读性检查
+│     ├─ 变量名是否回答"这是什么"？
+│     │     ✗ data, info, temp, result, ret
+│     │     ✓ free_frame_count, keyboard_scancode, trace_ring_buffer
+│     ├─ 函数名是否回答"做什么"？
+│     │     ✗ process(), handle(), run(), do_work()
+│     │     ✓ allocate_physical_frame(), dispatch_syscall(), parse_shell_command()
+│     ├─ Bool 变量/函数是否读作自然语言断言？
+│     │     ✗ flag, status, check
+│     │     ✓ is_page_mapped, has_pending_interrupt, should_reschedule
+│     ├─ 类型名是否表达"它是什么角色"？
+│     │     ✗ Manager2, DataHolder, Helper
+│     │     ✓ BitmapFrameAllocator, MlfqScheduler, VfsPathResolver
+│     └─ 违反 → 重命名后再继续
+├─ 7. 依赖关系检查（单向流原则）
+│     ├─ 模块间依赖是否单向？（上层 → 下层，禁止反向或循环）
+│     │     Shell → Syscall → Process/FS → Memory → HAL（唯一合法方向）
+│     ├─ 函数是否只依赖参数和显式注入的服务？（禁止隐式全局状态偷取）
+│     ├─ 新增 use/import 是否引入了不该存在的跨层依赖？
+│     └─ 违反 → 通过 trait 抽象或参数注入消除非法依赖
+├─ 8. 函数职责检查（单一职责原则）
+│     ├─ 函数是否只做一件事？能否用一句话描述其职责且不用"和"/"或"？
+│     │     ✗ "分配帧并映射页表并更新统计"
+│     │     ✓ "从空闲位图中分配一个物理帧"
+│     ├─ 函数是否混合了策略与机制？
+│     │     策略 = 决定做什么（如：选择下一个调度的进程）
+│     │     机制 = 怎么做（如：保存/恢复 CPU 上下文）
+│     │     策略和机制必须分离到不同函数
+│     ├─ 函数是否有隐式副作用？（修改全局状态、I/O 操作）
+│     │     所有副作用必须在函数签名或名称中显式体现
+│     │     ✗ fn get_frame() 内部修改全局计数器
+│     │     ✓ fn allocate_frame() 名称暗示会改变状态
+│     └─ 违反 → 拆分为纯计算函数 + 副作用函数
+├─ 9. 注释质量检查
+│     ├─ 注释是否解释"为什么这么做"而非"做了什么"？
+│     │     ✗ // 遍历位图查找空闲帧
+│     │     ✓ // 使用线性扫描而非 buddy 算法，因为帧数 <1M 时性能差异可忽略
+│     ├─ 代码本身能表达的信息是否被注释重复了？→ 删除冗余注释
+│     ├─ 存在反直觉的实现是否有注释解释原因？
+│     │     ✓ // PIC 重映射到 32-47 是因为 0-31 被 CPU 异常占用
+│     ├─ unsafe 块是否有 SAFETY 注释说明为什么安全？
+│     └─ 违反 → 修正注释再继续
+├─ 10. 状态变迁检查
+│     ├─ 有状态的对象是否有明确的状态枚举？（禁止用 bool 组合表示状态）
+│     │     ✗ is_running: bool + is_blocked: bool
+│     │     ✓ state: ProcessState { Created, Ready, Running, Blocked, Terminated }
+│     ├─ 状态转换是否在单一位置管理？（禁止散落在多处直接修改状态字段）
+│     ├─ 非法状态转换是否被类型系统或运行时检查拦截？
+│     └─ 违反 → 引入状态机模式重构
+└─ 11. 重构需求存在？→ 先完成重构 commit，再开始新任务
 ```
 
 ### 1.3 Commit 规则
 
 **原则**: 一个 commit = 一个原子性变更（一个 feature 或一个 bugfix）
 
-**Commit 消息格式**:
+**Commit 消息格式** (Conventional Commits):
 ```
 <type>(<scope>): <简短描述>
-
-<可选的详细描述>
-
-<可选的关联任务ID>
 ```
 
+仅此一行，不加 body 和 footer。简短描述必须说明**解决了什么问题 / 达成了什么能力**，而非描述做了什么操作。
+
+**描述撰写原则 — 说"解决了什么"，不说"做了什么"**:
+
+| ✗ 错误（描述操作） | ✓ 正确（描述解决的问题） |
+|---|---|
+| `feat(memory): implement bitmap frame allocator` | `feat(memory): enable physical frame allocation via bitmap` |
+| `fix(scheduler): change priority comparison logic` | `fix(scheduler): prevent low-priority tasks from starving` |
+| `refactor(hal): extract port I/O into separate module` | `refactor(hal): isolate port I/O for independent testability` |
+| `test(memory): add frame allocator unit tests` | `test(memory): verify frame alloc/dealloc correctness` |
+| `docs(trace): add rustdoc for Tracer trait` | `docs(trace): clarify Tracer trait contract for implementors` |
+| `chore: update rust-toolchain` | `chore: lock nightly toolchain for reproducible builds` |
+
 **Type 枚举**:
-| Type | 说明 | 示例 |
-|------|------|------|
-| `feat` | 新功能 | `feat(memory): implement bitmap frame allocator` |
-| `fix` | Bug 修复 | `fix(scheduler): prevent priority inversion` |
-| `refactor` | 重构（不改变行为） | `refactor(hal): extract port I/O into separate module` |
-| `test` | 添加/修改测试 | `test(memory): add frame allocator unit tests` |
-| `docs` | 文档变更 | `docs(trace): add rustdoc for Tracer trait` |
-| `chore` | 构建/工具链变更 | `chore: update rust-toolchain to nightly-2026-02-25` |
+| Type | 说明 |
+|------|------|
+| `feat` | 新增能力 |
+| `fix` | 修复缺陷 |
+| `refactor` | 改善结构（不改变行为） |
+| `test` | 补充/修正测试 |
+| `docs` | 文档变更 |
+| `chore` | 构建/工具链/CI 变更 |
 
 **Commit 自检清单**:
 - [ ] 本次 commit 只包含一个功能/修复
@@ -89,6 +148,7 @@
 - [ ] `cargo fmt --check` 通过
 - [ ] 新增公开接口有 rustdoc 注释
 - [ ] 无遗留的调试代码（`dbg!`, 临时 `println!` 等）
+- [ ] commit 消息描述的是"解决了什么"而非"做了什么"
 
 ### 1.4 卡住时的处理策略
 
@@ -136,6 +196,10 @@
 3. 模块内部出现循环依赖
 4. Trait 接口需要修改（影响多个实现）
 5. 测试覆盖率明显不足（新增逻辑无测试）
+6. **散弹枪手术**: 新增需求导致改动旧代码处超过 2 处 → 说明职责边界划分有问题，立刻重构将变更收敛到单一模块
+7. **兼容代码气味**: 需要添加 `if`/`match` 分支做兼容或特殊处理 → 立刻重构为可扩展结构（trait / 策略模式 / 枚举 dispatch），使后续需求可通过新增代码而非修改旧代码来满足
+8. **上下文碎片化**: 修改代码后，理解某个行为需要跳转 > 2 个文件才能拼凑完整逻辑 → 立刻重构，将相关逻辑内聚到同一模块，保证局部可推理性（读一个函数/模块就能理解完整行为）
+9. **隐式耦合**: 修改 A 模块后 B 模块意外失败 → 说明存在隐式依赖，立刻通过显式接口（trait 参数/返回值）替代隐式共享状态
 
 ### 1.6 测试策略
 
@@ -184,7 +248,206 @@
 ### 下一检查点准备状态
 - [x] 依赖的接口已定义
 - [x] 测试基础设施就绪
+
+### Hotspot 风险热点
+- 🔴 P0 文件: [列表] (满足 4/4 条件)
+- 🟡 P1 文件: [列表] (满足 3/4 条件)
+- ⚪ P2 文件: [列表] (满足 2/4 条件)
 ```
+
+### 1.8 Hotspot 风险评分模型
+
+代码质量不能仅靠编写时的主观判断，必须用**数据驱动的结构风险评估**量化识别高风险文件。每个检查点完成时必须运行 Hotspot 分析，结果记入检查点报告。
+
+#### 1.8.1 四个评估维度
+
+##### 维度 ①：复杂度 (Complexity)
+
+| 指标 | 计算方式 | 警戒阈值 |
+|------|---------|---------|
+| 圈复杂度 CC_total | 文件内所有函数 CC 求和 | > 50 |
+| 最大单函数 CC | 单个函数的 CC | > 15 |
+| 最大嵌套深度 | 代码块嵌套层数 | > 4 |
+| 文件行数 LOC | 非注释代码行 | > 500 |
+
+**标准化得分** (归一化到 0~1):
+
+```
+ComplexityScore =
+    0.4 × min(1, CC_total / 50) +
+    0.3 × min(1, MaxFnCC / 15) +
+    0.3 × min(1, MaxNesting / 4)
+```
+
+**Rust 项目测量方法**:
+- 使用 `rust-code-analysis` 工具计算 CC
+- 或手工统计：每个 `if` / `match arm` / `while` / `for` / `&&` / `||` 各计 +1
+
+##### 维度 ②：高频修改 (Change Frequency)
+
+| 指标 | 计算方式 | 警戒阈值 |
+|------|---------|---------|
+| 近期提交次数 | `git log --since="3 months" --oneline -- <file> \| wc -l` | > 10 |
+| 修改作者数 | `git shortlog -s -- <file> \| wc -l` | > 3 |
+| 行变更总数 | 累计 insertions + deletions | > 300 |
+
+**标准化得分**:
+
+```
+ChangeScore =
+    0.6 × min(1, CommitCount / 10) +
+    0.4 × min(1, AuthorCount / 3)
+```
+
+**注意**: 项目初期（CP1-CP3）所有文件提交次数都较高属于正常现象，Hotspot 分析从 CP4 开始才具有参考意义。
+
+##### 维度 ③：缺陷密度 (Defect Density)
+
+| 指标 | 计算方式 | 警戒阈值 |
+|------|---------|---------|
+| Bug 修复次数 | commit message 中含 `fix` 的提交数 | > 5 / 3个月 |
+| 缺陷密度 | Bug修复次数 / LOC × 1000 | > 20 |
+| 回滚次数 | revert 次数 | > 2 |
+
+**标准化得分**:
+
+```
+DefectScore = min(1, BugFixCount / 5)
+```
+
+##### 维度 ④：测试覆盖 (Test Coverage)
+
+| 指标 | 警戒阈值 |
+|------|---------|
+| 行覆盖率 | < 60% |
+| 关键函数无测试 | 是 |
+| unsafe 块无测试 | 是 |
+
+**标准化得分**:
+
+```
+CoverageScore = 1 - CoverageRate
+```
+
+例：覆盖率 80% → Score = 0.2（低风险），覆盖率 40% → Score = 0.6（高风险）
+
+**Rust no_std 测量方法**:
+- 可单元测试的模块（pure logic）：使用 `cargo tarpaulin` 或手工统计
+- 不可测模块（硬件依赖）：统计是否有 Mock trait + 对应测试
+- 无法自动测量时，按以下规则赋分：
+  - 有完整测试（正常+边界+错误） → 0.1
+  - 有基本测试 → 0.3
+  - 仅有 smoke test → 0.6
+  - 无测试 → 1.0
+
+#### 1.8.2 综合风险得分
+
+##### 加权线性模型（常规使用）
+
+```
+RiskScore =
+    0.30 × ComplexityScore +
+    0.30 × ChangeScore +
+    0.25 × DefectScore +
+    0.15 × CoverageScore
+```
+
+| 风险等级 | RiskScore 范围 | 操作 |
+|---------|---------------|------|
+| 🟢 低风险 | 0 ~ 0.3 | 无需特殊关注 |
+| 🟡 中风险 | 0.3 ~ 0.6 | 下个检查点前安排重构 |
+| 🔴 高风险 | 0.6 ~ 1.0 | 立刻停止新功能，优先重构 |
+
+##### 乘法模型（识别"四高"极端热点）
+
+```
+MultiplicativeRisk = ComplexityScore × ChangeScore × DefectScore × CoverageScore
+```
+
+任何一项接近 0 → 总风险下降；四项都高 → 指数级上升。`MultiplicativeRisk > 0.3` 即为严重热点。
+
+#### 1.8.3 硬性判定规则（无需计算版）
+
+**判定为 P0 高风险热点文件**的条件——满足以下 4 条中 ≥ 3 条：
+
+```
+IF:
+    CC_total > 50
+    AND CommitCount(3个月) > 10
+    AND BugFixCount(3个月) > 5
+    AND TestCoverage < 60%
+THEN:
+    标记为 🔴 P0 重构对象 → 立刻重构，阻塞新功能
+```
+
+**判定为 P1 中风险热点**——满足 2 条：
+
+```
+标记为 🟡 P1 → 当前检查点结束前必须重构
+```
+
+**判定为 P2 低风险关注**——满足 1 条：
+
+```
+标记为 ⚪ P2 → 记录到风险登记簿，下个检查点复查
+```
+
+#### 1.8.4 Hotspot 分析执行时机
+
+| 时机 | 动作 |
+|------|------|
+| 每个检查点完成时 | **必须执行**完整 Hotspot 分析，结果写入检查点报告 |
+| 每次重构前 | 检查目标文件的 RiskScore，优先处理得分最高的 |
+| 发现连续 fix commit 时 | 对涉及文件立即计算 DefectScore |
+| 代码审查发现高嵌套/长函数 | 对该文件计算 ComplexityScore |
+
+#### 1.8.5 Hotspot 分析脚本
+
+在每个检查点完成时执行以下 Git 分析（自动化）：
+
+```bash
+#!/bin/bash
+# scripts/hotspot-analysis.sh
+# 输出近 3 个月各文件的修改频率和 fix 次数
+
+echo "=== 修改频率 Top 20 ==="
+git log --since="3 months" --name-only --pretty=format: -- 'crates/**/*.rs' \
+  | sort | uniq -c | sort -rn | head -20
+
+echo ""
+echo "=== Bug 修复热点 ==="
+git log --since="3 months" --name-only --pretty=format: --grep="^fix" -- 'crates/**/*.rs' \
+  | sort | uniq -c | sort -rn | head -20
+
+echo ""
+echo "=== 文件行数 Top 20 ==="
+find crates -name '*.rs' -exec wc -l {} + | sort -rn | head -20
+
+echo ""
+echo "=== 多作者文件 ==="
+for f in $(find crates -name '*.rs'); do
+  authors=$(git shortlog -s -- "$f" 2>/dev/null | wc -l)
+  if [ "$authors" -gt 2 ]; then
+    echo "$authors authors: $f"
+  fi
+done
+```
+
+#### 1.8.6 工业级 Hotspot 交叉分析
+
+当项目进入 CP4+ 阶段后，使用 Google/Microsoft 常用的交叉排序法：
+
+```
+1. 按修改频率排序 → 取 Top 20% 文件
+2. 按复杂度排序   → 取 Top 20% 文件
+3. 取交集         → 这些就是真正的 Hotspot
+4. 交集内按缺陷数排序 → 得到重构优先级
+```
+
+这种方法比单一维度阈值判定更精确：
+- 高复杂度但从不修改 → 不是当前风险（稳定的复杂代码）
+- 高频修改但很简单 → 不是结构风险（活跃但健康的代码）
+- **高复杂度 + 高频修改** → 真正的结构风险热点
 
 ---
 
@@ -300,7 +563,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 创建 `Cargo.toml`，设置 `[workspace]` 和 `members` 列表
   2. 设置 workspace 级别的 `[profile.dev]` 和 `[profile.release]`
   3. 设置 workspace 级别的 `[workspace.dependencies]` 共享依赖
-- **Commit**: `chore: initialize cargo workspace with 12 crate members`
+- **Commit**: `chore: establish multi-crate workspace for modular kernel`
 - **验收标准**:
   - [ ] `Cargo.toml` 中 members 包含所有 12 个 crate 路径
   - [ ] workspace dependencies 定义了 `spin`, `bitflags`, `volatile` 等共享依赖
@@ -313,7 +576,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   2. 指定 channel = "nightly"
   3. 添加 components: rust-src, llvm-tools-preview, rustfmt, clippy
   4. 添加 targets: x86_64-unknown-none
-- **Commit**: `chore: add rust-toolchain.toml with nightly and x86_64 target`
+- **Commit**: `chore: lock nightly toolchain for reproducible bare-metal builds`
 - **验收标准**:
   - [ ] `rustup show` 显示正确的 nightly 版本
   - [ ] `rustc --version` 输出 nightly
@@ -326,7 +589,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 评估是否需要自定义 target JSON（内置 `x86_64-unknown-none` 可能已足够）
   2. 如需自定义：创建 `x86_64-minios.json`
   3. 在 `.cargo/config.toml` 中设置默认 target
-- **Commit**: `chore: configure x86_64 bare-metal build target`
+- **Commit**: `chore: enable bare-metal compilation for x86_64`
 - **验收标准**:
   - [ ] `.cargo/config.toml` 存在且 target 配置正确
   - [ ] 裸机编译不报 target 相关错误
@@ -338,7 +601,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 创建 `crates/hal/Cargo.toml`（`name = "minios-hal"`, `no_std`）
   2. 创建 `crates/hal/src/lib.rs`（`#![no_std]`，空模块声明）
   3. 声明将要包含的子模块（注释形式）
-- **Commit**: `chore(hal): create hal crate skeleton`
+- **Commit**: `chore(hal): establish HAL crate for hardware isolation`
 - **验收标准**:
   - [ ] `cargo build -p minios-hal --target x86_64-unknown-none` 通过
   - [ ] lib.rs 包含 `#![no_std]` 声明
@@ -350,7 +613,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 创建 `crates/trace/Cargo.toml`
   2. 创建 `crates/trace/src/lib.rs`（`#![no_std]`）
   3. 添加对 `minios-hal` 的依赖（workspace dependency）
-- **Commit**: `chore(trace): create trace crate skeleton`
+- **Commit**: `chore(trace): establish trace crate for observability`
 - **验收标准**:
   - [ ] `cargo build -p minios-trace --target x86_64-unknown-none` 通过
   - [ ] 正确依赖 `minios-hal`
@@ -362,7 +625,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 创建 `crates/trace-macros/Cargo.toml`（`proc-macro = true`）
   2. 创建 `crates/trace-macros/src/lib.rs`
   3. 添加 `syn`, `quote`, `proc-macro2` 依赖
-- **Commit**: `chore(trace-macros): create proc-macro crate skeleton`
+- **Commit**: `chore(trace-macros): establish proc-macro crate for trace annotations`
 - **验收标准**:
   - [ ] `cargo build -p minios-trace-macros` 通过（注意不需要 --target）
   - [ ] Cargo.toml 中 `[lib] proc-macro = true` 设置正确
@@ -374,7 +637,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 创建 `crates/memory/Cargo.toml`
   2. 创建 `crates/memory/src/lib.rs`（`#![no_std]`）
   3. 添加 workspace dependencies
-- **Commit**: `chore(memory): create memory crate skeleton`
+- **Commit**: `chore(memory): establish memory management crate`
 - **验收标准**:
   - [ ] crate 可编译
   - [ ] 依赖声明正确
@@ -385,7 +648,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
 - **开发任务**:
   1. 创建目录和文件
   2. 声明 `#![no_std]`
-- **Commit**: `chore(interrupt): create interrupt crate skeleton`
+- **Commit**: `chore(interrupt): establish interrupt handling crate`
 - **验收标准**:
   - [ ] crate 可编译
 - **代码审查**: 依赖方向正确
@@ -393,38 +656,38 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
 ### CP1-T09: 创建 `crates/process` crate 骨架
 - **目标**: 创建进程管理 crate 骨架
 - **开发任务**: 同上模式
-- **Commit**: `chore(process): create process crate skeleton`
+- **Commit**: `chore(process): establish process management crate`
 - **验收标准**:
   - [ ] crate 可编译
 - **代码审查**: 通过
 
 ### CP1-T10: 创建 `crates/scheduler` crate 骨架
 - **目标**: 创建调度器 crate 骨架
-- **Commit**: `chore(scheduler): create scheduler crate skeleton`
+- **Commit**: `chore(scheduler): establish task scheduling crate`
 - **验收标准**:
   - [ ] crate 可编译
 
 ### CP1-T11: 创建 `crates/fs` crate 骨架
 - **目标**: 创建文件系统 crate 骨架
-- **Commit**: `chore(fs): create fs crate skeleton`
+- **Commit**: `chore(fs): establish filesystem crate`
 - **验收标准**:
   - [ ] crate 可编译
 
 ### CP1-T12: 创建 `crates/ipc` crate 骨架
 - **目标**: 创建 IPC crate 骨架
-- **Commit**: `chore(ipc): create ipc crate skeleton`
+- **Commit**: `chore(ipc): establish inter-process communication crate`
 - **验收标准**:
   - [ ] crate 可编译
 
 ### CP1-T13: 创建 `crates/syscall` crate 骨架
 - **目标**: 创建系统调用 crate 骨架
-- **Commit**: `chore(syscall): create syscall crate skeleton`
+- **Commit**: `chore(syscall): establish system call interface crate`
 - **验收标准**:
   - [ ] crate 可编译
 
 ### CP1-T14: 创建 `crates/shell` crate 骨架
 - **目标**: 创建 Shell crate 骨架
-- **Commit**: `chore(shell): create shell crate skeleton`
+- **Commit**: `chore(shell): establish interactive terminal crate`
 - **验收标准**:
   - [ ] crate 可编译
 
@@ -435,7 +698,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   2. 创建 `crates/kernel/src/main.rs`（`#![no_std]`, `#![no_main]`）
   3. 添加 panic_handler 和 _start 入口（空实现）
   4. 依赖所有其他 crate
-- **Commit**: `chore(kernel): create kernel integration crate skeleton`
+- **Commit**: `chore(kernel): establish bootable kernel entry crate`
 - **验收标准**:
   - [ ] `cargo build -p minios-kernel --target x86_64-unknown-none` 通过
   - [ ] 包含 `#![no_std]` 和 `#![no_main]`
@@ -448,7 +711,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 创建 `crates/common/Cargo.toml`
   2. 定义 `Pid`, `FileDescriptor`, `InodeId` 等基础类型
   3. 定义公共错误枚举 `KernelError`
-- **Commit**: `feat(common): add shared kernel types crate`
+- **Commit**: `feat(common): enable cross-crate type sharing`
 - **验收标准**:
   - [ ] 基础 ID 类型定义（Pid, FileDescriptor, QueueId 等）
   - [ ] 公共错误类型定义
@@ -460,7 +723,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
 - **开发任务**:
   1. 添加 `x86_64`, `bootloader`, `spin`, `volatile`, `uart_16550`, `bitflags`, `linked_list_allocator` 等
   2. 各 crate 使用 `workspace = true` 引用
-- **Commit**: `chore: centralize workspace dependency versions`
+- **Commit**: `chore: prevent dependency version drift across crates`
 - **验收标准**:
   - [ ] 所有外部依赖在 workspace root 统一声明
   - [ ] 各 crate 使用 `dependency.workspace = true`
@@ -472,7 +735,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 设置 `[build] target = "x86_64-unknown-none"`
   2. 设置 runner（QEMU 命令）
   3. 设置 rustflags（如需要）
-- **Commit**: `chore: add cargo build configuration`
+- **Commit**: `chore: default cargo build to bare-metal target`
 - **验收标准**:
   - [ ] `cargo build` 默认编译为 x86_64-unknown-none
   - [ ] config.toml 语法正确
@@ -487,7 +750,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   4. 定义 `clippy` 任务
   5. 定义 `fmt` / `fmt-check` 任务
   6. 定义 `clean` 任务
-- **Commit**: `chore: add Makefile.toml with build/test/lint tasks`
+- **Commit**: `chore: enable one-command build/test/lint workflow`
 - **验收标准**:
   - [ ] `cargo make build` 成功
   - [ ] `cargo make test` 成功
@@ -502,7 +765,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   2. 定义 `run-headless` 任务（无 GUI）
   3. 定义 `run-trace` 任务（trace 捕获到文件）
   4. 定义 `debug` 任务（等待 GDB 连接）
-- **Commit**: `chore: add QEMU run/debug tasks to Makefile.toml`
+- **Commit**: `chore: enable one-command QEMU boot and debug`
 - **验收标准**:
   - [ ] 任务定义语法正确
   - [ ] QEMU 命令参数合理
@@ -514,7 +777,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 添加 `bootloader` 依赖到 kernel crate
   2. 配置 bootloader 的构建选项
   3. 确保 bootloader 能正确构建磁盘镜像
-- **Commit**: `chore(kernel): configure bootloader dependency`
+- **Commit**: `chore(kernel): enable bootable disk image generation`
 - **验收标准**:
   - [ ] bootloader 依赖正确添加
   - [ ] 编译时能生成引导镜像
@@ -526,7 +789,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 创建 `.github/workflows/ci.yml`
   2. 配置 build, test, clippy, fmt 步骤
   3. 配置 nightly toolchain 安装
-- **Commit**: `chore: add GitHub Actions CI configuration`
+- **Commit**: `chore: automate build/test/lint checks on every push`
 - **验收标准**:
   - [ ] YAML 语法正确
   - [ ] 步骤覆盖编译、测试、lint、格式检查
@@ -538,7 +801,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 添加 `/target/`
   2. 添加 IDE 相关文件
   3. 添加 QEMU 临时文件
-- **Commit**: `chore: add .gitignore`
+- **Commit**: `chore: exclude build artifacts from version control`
 - **验收标准**:
   - [ ] target/ 被忽略
   - [ ] 编辑器配置被忽略
@@ -552,7 +815,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   3. 创建 `docs/risks/risk-register.md`
   4. 创建 `docs/decisions/pending-decisions.md`
   5. 创建 `CHANGELOG.md`
-- **Commit**: `docs: create documentation archive structure`
+- **Commit**: `docs: establish documentation tracking infrastructure`
 - **验收标准**:
   - [ ] 所有目录和模板文件存在
   - [ ] 模板格式与 plan.md 定义一致
@@ -563,7 +826,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
 - **开发任务**:
   1. 创建 `docs/adr/001-use-rust-nightly.md`
   2. 记录背景、决策、备选方案、影响
-- **Commit**: `docs(adr): ADR-001 use Rust nightly for OS development`
+- **Commit**: `docs(adr): record why Rust nightly is required`
 - **验收标准**:
   - [ ] ADR 格式正确
   - [ ] 内容完整（背景、决策、备选、影响）
@@ -571,13 +834,13 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
 
 ### CP1-T26: 创建 ADR — 选择 bootloader crate
 - **目标**: 记录引导方案选择
-- **Commit**: `docs(adr): ADR-002 use bootloader crate for booting`
+- **Commit**: `docs(adr): record bootloader strategy trade-offs`
 - **验收标准**:
   - [ ] 对比了自写引导、bootloader crate、uefi-rs 三种方案
 
 ### CP1-T27: 创建 ADR — Workspace 多 crate 架构
 - **目标**: 记录模块化架构决策
-- **Commit**: `docs(adr): ADR-003 multi-crate workspace architecture`
+- **Commit**: `docs(adr): record why multi-crate beats single-crate`
 - **验收标准**:
   - [ ] 说明了为什么选择多 crate 而非单 crate
 
@@ -589,7 +852,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   3. 添加快速开始（build, run, test）
   4. 添加项目结构概览
   5. 添加贡献指南链接
-- **Commit**: `docs: update README with project overview and build instructions`
+- **Commit**: `docs: enable new developers to build and run in 3 commands`
 - **验收标准**:
   - [ ] 新开发者能根据 README 成功构建项目
   - [ ] 包含架构概览图
@@ -601,7 +864,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 定义 `Color` 枚举（16 色）
   2. 定义 `ColorCode` 结构体（前景 + 背景）
   3. 实现 `ColorCode::new(fg, bg)`
-- **Commit**: `feat(common): add VGA color code types`
+- **Commit**: `feat(common): enable type-safe VGA color composition`
 - **验收标准**:
   - [ ] 16 种颜色定义
   - [ ] ColorCode 正确组合前景/背景色
@@ -615,7 +878,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   2. 实现 `new()`, `push()`, `as_str()`, `len()`, `is_empty()`
   3. 实现 `Display`, `Debug` trait
   4. 实现 `From<&str>` trait（截断超长输入）
-- **Commit**: `feat(common): add stack-allocated ArrayString type`
+- **Commit**: `feat(common): enable heap-free string storage in no_std`
 - **验收标准**:
   - [ ] 编译通过（no_std）
   - [ ] 基本操作测试通过
@@ -629,7 +892,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   2. 定义 `SpanId(pub u64)`
   3. 实现 `Display`（十六进制格式）
   4. 实现 `PartialEq`, `Eq`, `Hash`, `Clone`, `Copy`
-- **Commit**: `feat(common): add TraceId and SpanId types`
+- **Commit**: `feat(common): ensure trace identifiers are type-safe and display-friendly`
 - **验收标准**:
   - [ ] 类型定义正确
   - [ ] Display 输出十六进制格式
@@ -643,7 +906,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   2. 定义 `ProcessState` 枚举（Created, Ready, Running, Blocked, Terminated）
   3. 定义 `Priority(pub u8)` + 常量 (HIGH=0, MEDIUM=1, LOW=2, IDLE=3)
   4. 定义 `ProcessInfo` 结构体（摘要信息）
-- **Commit**: `feat(common): add process-related types`
+- **Commit**: `feat(common): define process lifecycle vocabulary types`
 - **验收标准**:
   - [ ] 类型编译通过
   - [ ] ProcessState 覆盖所有状态
@@ -659,7 +922,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   5. 定义 `DirEntry` 结构体
   6. 定义 `FileStat` 结构体
   7. 定义 `InodeType` 枚举（File, Directory, Device, Special）
-- **Commit**: `feat(common): add filesystem types`
+- **Commit**: `feat(common): define filesystem vocabulary types`
 - **验收标准**:
   - [ ] 类型编译通过
   - [ ] OpenFlags 使用 bitflags 宏
@@ -671,7 +934,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 定义 `QueueId(pub u32)`
   2. 定义 `ShmId(pub u32)`
   3. 定义 `Message` 结构体
-- **Commit**: `feat(common): add IPC types`
+- **Commit**: `feat(common): define IPC message vocabulary types`
 - **验收标准**:
   - [ ] 类型编译通过
   - [ ] Message 中包含 TraceContext 字段
@@ -687,7 +950,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   5. 定义 `DriverError` 枚举
   6. 定义 `TraceError` 枚举
   7. 定义 `KernelError` 统一枚举（From 转换）
-- **Commit**: `feat(common): add error types for all subsystems`
+- **Commit**: `feat(common): enable typed error handling across subsystems`
 - **验收标准**:
   - [ ] 所有错误类型实现 `Debug`
   - [ ] `KernelError` 实现 `From<XxxError>` 转换
@@ -696,59 +959,59 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
 
 ### CP1-T36: 在 common crate 定义 Trait — FrameAllocator
 - **目标**: 定义物理帧分配器接口
-- **Commit**: `feat(common): define FrameAllocator trait`
+- **Commit**: `feat(common): establish frame allocation contract`
 - **验收标准**:
   - [ ] Trait 方法签名与 spec.md 一致
   - [ ] rustdoc 文档完整
 
 ### CP1-T37: 在 common crate 定义 Trait — VirtualMemoryManager
 - **目标**: 定义虚拟内存管理接口
-- **Commit**: `feat(common): define VirtualMemoryManager trait`
+- **Commit**: `feat(common): establish virtual memory management contract`
 - **验收标准**:
   - [ ] Trait 方法签名与 spec.md 一致
 
 ### CP1-T38: 在 common crate 定义 Trait — Tracer
 - **目标**: 定义 Trace 引擎接口
-- **Commit**: `feat(common): define Tracer trait`
+- **Commit**: `feat(common): establish trace engine contract`
 - **验收标准**:
   - [ ] 包含 begin_span, end_span, add_event, current_context 等方法
   - [ ] SpanGuard 类型定义
 
 ### CP1-T39: 在 common crate 定义 Trait — ProcessManager
 - **目标**: 定义进程管理接口
-- **Commit**: `feat(common): define ProcessManager trait`
+- **Commit**: `feat(common): establish process management contract`
 - **验收标准**:
   - [ ] 方法签名与 spec.md 一致
 
 ### CP1-T40: 在 common crate 定义 Trait — Scheduler
 - **目标**: 定义调度器接口
-- **Commit**: `feat(common): define Scheduler trait`
+- **Commit**: `feat(common): establish task scheduling contract`
 - **验收标准**:
   - [ ] ScheduleDecision 枚举定义
   - [ ] SchedulerStats 结构体定义
 
 ### CP1-T41: 在 common crate 定义 Trait — FileSystem + FileSystemDriver
 - **目标**: 定义文件系统层接口
-- **Commit**: `feat(common): define FileSystem and FileSystemDriver traits`
+- **Commit**: `feat(common): establish VFS and driver-level filesystem contracts`
 - **验收标准**:
   - [ ] 双层 trait 设计（VFS + Driver）
 
 ### CP1-T42: 在 common crate 定义 Trait — IpcManager
 - **目标**: 定义 IPC 接口
-- **Commit**: `feat(common): define IpcManager trait`
+- **Commit**: `feat(common): establish IPC communication contract`
 - **验收标准**:
   - [ ] 消息队列和共享内存方法
 
 ### CP1-T43: 在 common crate 定义 Trait — DeviceDriver
 - **目标**: 定义设备驱动接口
-- **Commit**: `feat(common): define DeviceDriver trait`
+- **Commit**: `feat(common): establish device driver contract`
 - **验收标准**:
   - [ ] DeviceType 枚举
   - [ ] init/read/write/ioctl 方法
 
 ### CP1-T44: 在 common crate 定义 Trait — HAL traits
 - **目标**: 定义 HAL 层接口（HalSerial, HalDisplay, HalInterruptController）
-- **Commit**: `feat(common): define HAL traits`
+- **Commit**: `feat(common): establish hardware abstraction contracts`
 - **验收标准**:
   - [ ] 三个 trait 定义完整
 
@@ -758,7 +1021,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 在 common crate 定义 `KernelServices` 结构体
   2. 定义 `kernel()` 全局访问函数
   3. 使用 `Once` 或类似机制保证单次初始化
-- **Commit**: `feat(common): define KernelServices registry`
+- **Commit**: `feat(common): enable decoupled subsystem access via registry`
 - **验收标准**:
   - [ ] KernelServices 包含所有子系统 trait 引用
   - [ ] `kernel()` 函数返回 `&'static KernelServices`
@@ -770,7 +1033,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 修复所有编译错误
   2. 修复所有 clippy 警告
   3. 运行 fmt
-- **Commit**: `fix: resolve workspace-wide compilation issues`
+- **Commit**: `fix: ensure all crates compile together without errors`
 - **验收标准**:
   - [ ] `cargo build --workspace --target x86_64-unknown-none` 通过
   - [ ] `cargo clippy --workspace` 零警告
@@ -784,7 +1047,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   2. 创建 `scripts/debug.sh`
   3. 创建 `scripts/capture-trace.sh`
   4. 设置可执行权限
-- **Commit**: `chore: add convenience shell scripts`
+- **Commit**: `chore: simplify common dev operations to single commands`
 - **验收标准**:
   - [ ] 脚本语法正确
   - [ ] 有执行权限
@@ -796,7 +1059,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 创建 `docs/progress/cp01-report.md`
   2. 更新 `CHANGELOG.md`
   3. 更新 AGENTS.md
-- **Commit**: `docs: add CP1 completion report`
+- **Commit**: `docs: record CP1 outcomes and quality metrics`
 - **验收标准**:
   - [ ] 报告包含所有验收标准的达成情况
   - [ ] CHANGELOG 记录了所有变更
@@ -841,7 +1104,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   2. 实现 `PortReadOnly<T>` 和 `PortWriteOnly<T>`
   3. 泛型 T 支持 u8, u16, u32
   4. 使用 `x86_64` crate 的端口 I/O 或直接内联汇编
-- **Commit**: `feat(hal): implement port I/O abstraction`
+- **Commit**: `feat(hal): enable safe x86 port read/write`
 - **验收标准**:
   - [ ] 编译通过
   - [ ] unsafe 代码有 SAFETY 注释
@@ -854,7 +1117,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 在 `crates/hal/src/serial.rs` 定义 `SerialPort` 结构体
   2. 实现 `init()` 方法：配置波特率、数据位、停止位
   3. COM1 端口地址: 0x3F8
-- **Commit**: `feat(hal): implement serial port initialization`
+- **Commit**: `feat(hal): enable UART 16550 serial communication`
 - **验收标准**:
   - [ ] 初始化代码正确设置串口寄存器
   - [ ] 使用 Port I/O 封装（CP2-T01 的成果）
@@ -866,7 +1129,7 @@ Proposed | Accepted | Deprecated | Superseded by ADR-XXX
   1. 实现 `write_byte(byte: u8)` — 等待发送缓冲区空再写
   2. 实现 `write_string(s: &str)`
   3. 实现 `fmt::Write` trait
-- **Commit**: `feat(hal): implement serial port write`
+- **Commit**: `feat(hal): enable formatted text output via serial`
 - **验收标准**:
   - [ ] 实现 `fmt::Write` 以支持 `write!` 宏
   - [ ] 等待发送就绪（检查 Line Status Register）
