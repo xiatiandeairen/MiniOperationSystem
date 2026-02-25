@@ -188,3 +188,96 @@ impl From<TraceError> for KernelError {
         Self::Trace(e)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    extern crate alloc;
+    use alloc::format;
+
+    #[test]
+    fn kernel_error_from_memory() {
+        let e = KernelError::from(MemoryError::OutOfMemory);
+        assert!(matches!(e, KernelError::Memory(MemoryError::OutOfMemory)));
+    }
+
+    #[test]
+    fn kernel_error_from_process() {
+        let e = KernelError::from(ProcessError::InvalidPid);
+        assert!(matches!(e, KernelError::Process(ProcessError::InvalidPid)));
+    }
+
+    #[test]
+    fn kernel_error_from_fs() {
+        let e = KernelError::from(FsError::NotFound);
+        assert!(matches!(e, KernelError::FileSystem(FsError::NotFound)));
+    }
+
+    #[test]
+    fn kernel_error_from_ipc() {
+        let e = KernelError::from(IpcError::QueueFull);
+        assert!(matches!(e, KernelError::Ipc(IpcError::QueueFull)));
+    }
+
+    #[test]
+    fn kernel_error_from_driver() {
+        let e = KernelError::from(DriverError::IoError);
+        assert!(matches!(e, KernelError::Driver(DriverError::IoError)));
+    }
+
+    #[test]
+    fn kernel_error_from_trace() {
+        let e = KernelError::from(TraceError::BufferFull);
+        assert!(matches!(e, KernelError::Trace(TraceError::BufferFull)));
+    }
+
+    #[test]
+    fn memory_error_display() {
+        assert_eq!(format!("{}", MemoryError::OutOfMemory), "out of physical memory");
+        assert_eq!(format!("{}", MemoryError::InvalidAddress), "invalid address");
+        assert_eq!(format!("{}", MemoryError::AlreadyMapped), "page already mapped");
+        assert_eq!(format!("{}", MemoryError::NotMapped), "page not mapped");
+        assert_eq!(format!("{}", MemoryError::AlignmentError), "address alignment error");
+    }
+
+    #[test]
+    fn process_error_display() {
+        assert_eq!(format!("{}", ProcessError::MaxProcessesReached), "max processes reached");
+        assert_eq!(format!("{}", ProcessError::InvalidPid), "invalid pid");
+        assert_eq!(format!("{}", ProcessError::ProcessNotFound), "process not found");
+        assert_eq!(format!("{}", ProcessError::InvalidStateTransition), "invalid state transition");
+        assert_eq!(format!("{}", ProcessError::StackAllocationFailed), "stack allocation failed");
+    }
+
+    #[test]
+    fn fs_error_display() {
+        assert_eq!(format!("{}", FsError::NotFound), "not found");
+        assert_eq!(format!("{}", FsError::AlreadyExists), "already exists");
+        assert_eq!(format!("{}", FsError::PermissionDenied), "permission denied");
+        assert_eq!(format!("{}", FsError::NoSpace), "no space");
+        assert_eq!(format!("{}", FsError::TooManyOpenFiles), "too many open files");
+        assert_eq!(format!("{}", FsError::InvalidDescriptor), "invalid descriptor");
+    }
+
+    #[test]
+    fn ipc_error_display() {
+        assert_eq!(format!("{}", IpcError::QueueFull), "queue full");
+        assert_eq!(format!("{}", IpcError::QueueEmpty), "queue empty");
+        assert_eq!(format!("{}", IpcError::Timeout), "timeout");
+    }
+
+    #[test]
+    fn driver_error_display() {
+        assert_eq!(format!("{}", DriverError::NotInitialized), "not initialized");
+        assert_eq!(format!("{}", DriverError::DeviceNotFound), "device not found");
+        assert_eq!(format!("{}", DriverError::IoError), "I/O error");
+        assert_eq!(format!("{}", DriverError::Unsupported), "unsupported operation");
+    }
+
+    #[test]
+    fn trace_error_display() {
+        assert_eq!(format!("{}", TraceError::BufferFull), "trace buffer full");
+        assert_eq!(format!("{}", TraceError::MaxDepthExceeded), "max trace depth exceeded");
+        assert_eq!(format!("{}", TraceError::NotInitialized), "tracer not initialized");
+    }
+}

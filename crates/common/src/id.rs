@@ -117,3 +117,70 @@ impl TraceIdGenerator {
         TraceId(self.next.fetch_add(1, Ordering::Relaxed))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    extern crate alloc;
+    use alloc::format;
+
+    #[test]
+    fn pid_display() {
+        assert_eq!(format!("{}", Pid(0)), "0");
+        assert_eq!(format!("{}", Pid(42)), "42");
+        assert_eq!(format!("{}", Pid(u32::MAX)), format!("{}", u32::MAX));
+    }
+
+    #[test]
+    fn trace_id_display_hex() {
+        assert_eq!(format!("{}", TraceId(0)), "0x0000000000000000");
+        assert_eq!(format!("{}", TraceId(0xABCD)), "0x000000000000ABCD");
+        assert_eq!(
+            format!("{}", TraceId(u64::MAX)),
+            "0xFFFFFFFFFFFFFFFF"
+        );
+    }
+
+    #[test]
+    fn span_id_display_hex() {
+        assert_eq!(format!("{}", SpanId(0)), "0x0000");
+        assert_eq!(format!("{}", SpanId(255)), "0x00FF");
+    }
+
+    #[test]
+    fn pid_allocator_monotonic() {
+        let alloc = PidAllocator::new();
+        assert_eq!(alloc.allocate(), Pid(0));
+        assert_eq!(alloc.allocate(), Pid(1));
+        assert_eq!(alloc.allocate(), Pid(2));
+    }
+
+    #[test]
+    fn pid_allocator_default() {
+        let alloc = PidAllocator::default();
+        assert_eq!(alloc.allocate(), Pid(0));
+    }
+
+    #[test]
+    fn span_id_generator_unique() {
+        let gen = SpanIdGenerator::new();
+        let a = gen.next();
+        let b = gen.next();
+        let c = gen.next();
+        assert_ne!(a, b);
+        assert_ne!(b, c);
+        assert_eq!(a, SpanId(1));
+        assert_eq!(b, SpanId(2));
+        assert_eq!(c, SpanId(3));
+    }
+
+    #[test]
+    fn trace_id_generator_unique() {
+        let gen = TraceIdGenerator::new();
+        let a = gen.next();
+        let b = gen.next();
+        assert_ne!(a, b);
+        assert_eq!(a, TraceId(1));
+        assert_eq!(b, TraceId(2));
+    }
+}
