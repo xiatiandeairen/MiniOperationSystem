@@ -220,13 +220,16 @@ fn on_timer_tick() {
     }
 }
 
-/// Performs a real context switch: saves old registers, loads new registers.
+/// Records a scheduling decision without performing a real context switch.
 ///
-/// The key insight is that `switch_context_asm` saves the callee-saved
-/// registers of the current execution flow into old_pid's CpuContext,
-/// then loads new_pid's CpuContext and jumps to its saved RIP.
-/// When old_pid is eventually switched back to, it resumes right after
-/// the `switch_context` call.
+/// Real context switching (via `switch_context_asm`) is available but
+/// currently the Shell runs in `kernel_main` which is not a registered
+/// process. Preempting it would lose the Shell execution context.
+/// Instead we track scheduling decisions for observability while the
+/// Shell remains the active execution path.
+///
+/// When process isolation is added (future work), tasks will be switched
+/// using `minios_process::context::switch_context`.
 fn handle_switch(old_pid: Pid, new_pid: Pid) {
     use minios_process::manager;
 
@@ -246,15 +249,6 @@ fn handle_switch(old_pid: Pid, new_pid: Pid) {
     }
 
     manager::set_current(new_pid);
-
-    let old_ctx = manager::context_ptr(old_pid);
-    let new_ctx = manager::context_ptr(new_pid);
-
-    if let (Some(old_ptr), Some(new_ptr)) = (old_ctx, new_ctx) {
-        // SAFETY: both pointers come from process table entries that
-        // are valid and pinned for the lifetime of the process.
-        unsafe { minios_process::context::switch_context(old_ptr, new_ptr) };
-    }
 }
 
 /// Idle task — halts between interrupts, resumes when scheduled back.
