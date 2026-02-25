@@ -10,8 +10,8 @@ use minios_common::traits::trace::Tracer;
 use minios_common::types::{AttributeValue, SpanStatus, TraceContext, TraceStats};
 use spin::Mutex;
 
-/// The global trace engine instance.
-pub static TRACER: spin::Lazy<TraceEngine> = spin::Lazy::new(TraceEngine::new);
+/// The global trace engine instance, placed directly in BSS.
+pub static TRACER: TraceEngine = TraceEngine::new();
 
 /// Trace engine that records spans into a fixed-size ring buffer.
 pub struct TraceEngine {
@@ -25,7 +25,7 @@ pub struct TraceEngine {
 
 impl TraceEngine {
     /// Creates a new trace engine with empty buffers.
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             buffer: Mutex::new(RingBuffer::new()),
             trace_ids: TraceIdGenerator::new(),
