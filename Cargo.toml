@@ -1,5 +1,6 @@
 [workspace]
 resolver = "2"
+exclude = ["tools/boot-image"]
 members = [
     "crates/common",
     "crates/hal",

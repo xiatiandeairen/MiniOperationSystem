@@ -1,0 +1,13 @@
+/workspace/tools/boot-image/target/x86_64-unknown-linux-gnu/release/deps/gpt-46e4938c2d1bddc9.d: /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/lib.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/macros.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/disk.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/header.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/mbr.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/partition.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/partition_types.rs
+
+/workspace/tools/boot-image/target/x86_64-unknown-linux-gnu/release/deps/libgpt-46e4938c2d1bddc9.rlib: /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/lib.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/macros.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/disk.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/header.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/mbr.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/partition.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/partition_types.rs
+
+/workspace/tools/boot-image/target/x86_64-unknown-linux-gnu/release/deps/libgpt-46e4938c2d1bddc9.rmeta: /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/lib.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/macros.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/disk.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/header.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/mbr.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/partition.rs /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/partition_types.rs
+
+/usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/lib.rs:
+/usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/macros.rs:
+/usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/disk.rs:
+/usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/header.rs:
+/usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/mbr.rs:
+/usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/partition.rs:
+/usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gpt-3.1.0/src/partition_types.rs:

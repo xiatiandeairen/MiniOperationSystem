@@ -19,10 +19,16 @@ pub mod vga;
 /// 1. GDT + TSS (needed before IDT for double-fault stack)
 /// 2. IDT + PIC (exception/interrupt handlers)
 /// 3. Serial port (COM1 UART)
-/// 4. Enables hardware interrupts
+///
+/// Does **not** enable interrupts — call [`enable_interrupts`] after
+/// completing all initialisation that depends on an interrupt-free context.
 pub fn init() {
     gdt::init();
     interrupts::init_idt();
     serial::init();
+}
+
+/// Enables hardware interrupts via the `sti` instruction.
+pub fn enable_interrupts() {
     x86_64::instructions::interrupts::enable();
 }

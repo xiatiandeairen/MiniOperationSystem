@@ -1,7 +1,7 @@
 //! Global Descriptor Table (GDT) and Task State Segment (TSS) setup.
 //!
-//! Configures a minimal GDT with a kernel code segment and a TSS that
-//! provides an Interrupt Stack Table entry for the double-fault handler.
+//! Configures a minimal GDT with kernel code/data segments and a TSS
+//! that provides an Interrupt Stack Table entry for the double-fault handler.
 
 use spin::Lazy;
 use x86_64::structures::gdt::{Descriptor, GlobalDescriptorTable, SegmentSelector};
@@ -32,6 +32,7 @@ static TSS: Lazy<TaskStateSegment> = Lazy::new(|| {
 /// Selectors produced when the GDT is built.
 struct Selectors {
     code_selector: SegmentSelector,
+    data_selector: SegmentSelector,
     tss_selector: SegmentSelector,
 }
 
@@ -39,25 +40,30 @@ struct Selectors {
 static GDT: Lazy<(GlobalDescriptorTable, Selectors)> = Lazy::new(|| {
     let mut gdt = GlobalDescriptorTable::new();
     let code_selector = gdt.append(Descriptor::kernel_code_segment());
+    let data_selector = gdt.append(Descriptor::kernel_data_segment());
     let tss_selector = gdt.append(Descriptor::tss_segment(&TSS));
     (
         gdt,
         Selectors {
             code_selector,
+            data_selector,
             tss_selector,
         },
     )
 });
 
-/// Loads the GDT and sets the code-segment and TSS selectors.
+/// Loads the GDT and sets the code-segment, data-segment, and TSS selectors.
 pub fn init() {
-    use x86_64::instructions::segmentation::{Segment, CS};
+    use x86_64::instructions::segmentation::{Segment, CS, DS, ES, SS};
     use x86_64::instructions::tables::load_tss;
 
     GDT.0.load();
     // SAFETY: Selectors were produced from the GDT we just loaded.
     unsafe {
         CS::set_reg(GDT.1.code_selector);
+        DS::set_reg(GDT.1.data_selector);
+        ES::set_reg(GDT.1.data_selector);
+        SS::set_reg(GDT.1.data_selector);
         load_tss(GDT.1.tss_selector);
     }
 }

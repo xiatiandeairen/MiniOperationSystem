@@ -135,6 +135,18 @@ pub static WRITER: Lazy<Mutex<Writer>> = Lazy::new(|| {
     })
 });
 
+/// Re-initialises the VGA writer with the given physical memory offset.
+///
+/// The bootloader maps all physical memory at a virtual offset. The VGA
+/// buffer at physical `0xB8000` becomes `offset + 0xB8000` in virtual space.
+pub fn init_with_offset(physical_memory_offset: u64) {
+    let vga_virtual = physical_memory_offset + VGA_BUFFER_ADDR as u64;
+    let mut writer = WRITER.lock();
+    writer.buffer = vga_virtual as *mut Buffer;
+    writer.column_position = 0;
+    writer.row_position = 0;
+}
+
 /// Writes formatted arguments to the VGA buffer (implementation detail).
 ///
 /// Interrupts are disabled for the duration to prevent deadlocks.
