@@ -5,14 +5,19 @@ use crate::input::LineBuffer;
 use crate::parser;
 use minios_hal::{print, println, serial_println};
 
-/// Reads one line of input from the keyboard, echoing to VGA.
+/// Tries the PS/2 keyboard first, then falls back to the serial port.
+fn read_char() -> Option<u8> {
+    minios_hal::keyboard::read_key().or_else(|| minios_hal::serial::read_byte())
+}
+
+/// Reads one line of input from the keyboard or serial port, echoing to VGA.
 ///
-/// Polls `keyboard::read_key()` with `hlt` between polls to avoid
+/// Polls both input sources with `hlt` between polls to avoid
 /// busy-waiting. Handles backspace and returns on Enter.
 fn read_line(buf: &mut LineBuffer) {
     buf.clear();
     loop {
-        if let Some(ch) = minios_hal::keyboard::read_key() {
+        if let Some(ch) = read_char() {
             match ch {
                 b'\n' | 13 => {
                     println!();
