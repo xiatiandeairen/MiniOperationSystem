@@ -16,10 +16,15 @@ pub use vfs::Vfs;
 
 use minios_common::traits::fs::FileSystem;
 use minios_common::types::OpenFlags;
+use spin::Mutex;
+
+/// Global VFS instance, set during [`init`] and accessible by all subsystems.
+pub static VFS: Mutex<Option<Vfs>> = Mutex::new(None);
 
 /// Initialises the filesystem with default directories and a welcome message.
 ///
 /// Creates: `/dev/`, `/proc/`, `/tmp/`, `/etc/`, and `/etc/motd`.
+/// The VFS is also stored in the global [`VFS`] static for shell access.
 pub fn init() -> Vfs {
     let vfs = Vfs::new();
     vfs.mkdir("/dev").ok();
@@ -35,4 +40,10 @@ pub fn init() -> Vfs {
     vfs.close(fd).expect("failed to close /etc/motd");
 
     vfs
+}
+
+/// Stores a VFS instance into the global static for use by the shell
+/// and other subsystems that need filesystem access.
+pub fn set_global_vfs(vfs: Vfs) {
+    *VFS.lock() = Some(vfs);
 }

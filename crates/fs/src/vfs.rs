@@ -7,10 +7,13 @@ use crate::fd::FdTable;
 use crate::procfs;
 use crate::ramfs::RamFs;
 
+use alloc::string::String;
+use alloc::vec::Vec;
+
 use minios_common::error::FsError;
 use minios_common::id::{FileDescriptor, InodeId};
 use minios_common::traits::fs::{FileSystem, FileSystemDriver};
-use minios_common::types::{FileStat, OpenFlags, SeekWhence};
+use minios_common::types::{FileStat, InodeType, OpenFlags, SeekWhence};
 use spin::Mutex;
 
 /// The virtual filesystem, combining RamFS with a global FD table.
@@ -116,6 +119,14 @@ impl Vfs {
             base.checked_sub((-offset) as usize)
                 .ok_or(FsError::InvalidPath)
         }
+    }
+}
+
+impl Vfs {
+    /// Lists the children of a directory at the given absolute path.
+    pub fn list_dir(&self, path: &str) -> Result<Vec<(String, InodeType)>, FsError> {
+        let inode = self.resolve_path(path)?;
+        self.driver.list_dir(inode)
     }
 }
 

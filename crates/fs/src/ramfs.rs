@@ -116,6 +116,24 @@ fn validate_parent(
     Ok(())
 }
 
+impl RamFs {
+    /// Returns the names and types of all children of a directory inode.
+    pub fn list_dir(&self, inode: InodeId) -> Result<Vec<(String, InodeType)>, FsError> {
+        let inodes = self.inodes.lock();
+        let node = inodes.get(&inode).ok_or(FsError::NotFound)?;
+        if node.inode_type != InodeType::Directory {
+            return Err(FsError::NotADirectory);
+        }
+        let mut entries = Vec::new();
+        for &child_id in &node.children {
+            if let Some(child) = inodes.get(&child_id) {
+                entries.push((child.name.clone(), child.inode_type));
+            }
+        }
+        Ok(entries)
+    }
+}
+
 impl FileSystemDriver for RamFs {
     fn name(&self) -> &str {
         "ramfs"
