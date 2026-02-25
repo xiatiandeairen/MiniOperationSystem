@@ -7,12 +7,14 @@ use alloc::vec;
 use bootloader_api::{config::Mapping, entry_point, BootInfo, BootloaderConfig};
 use core::panic::PanicInfo;
 use minios_common::traits::memory::{FrameAllocator, HeapAllocator};
-use minios_common::traits::trace::Tracer;
 
 /// Map the complete physical memory so we can access VGA buffer at 0xB8000.
+/// Stack is increased from the default 80 KiB to 512 KiB to accommodate
+/// debug-build stack frames during memory subsystem initialisation.
 const CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
     config.mappings.physical_memory = Some(Mapping::Dynamic);
+    config.kernel_stack_size = 512 * 1024;
     config
 };
 
@@ -23,24 +25,16 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     minios_hal::interrupts::init_idt();
     minios_hal::serial::init();
 
-    let _boot_guard = minios_trace::trace_span!("kernel_boot", module = "boot");
-
     minios_hal::serial_println!("MiniOS: boot sequence started");
 
-    {
-        let _hal_guard = minios_trace::trace_span!("hal_init", module = "boot");
-        if let Some(phys_offset) = boot_info.physical_memory_offset.as_ref() {
-            minios_hal::serial_println!("Physical memory offset: {:#x}", phys_offset);
-            minios_hal::vga::init_with_offset(*phys_offset);
-        }
+    if let Some(phys_offset) = boot_info.physical_memory_offset.as_ref() {
+        minios_hal::serial_println!("Physical memory offset: {:#x}", phys_offset);
+        minios_hal::vga::init_with_offset(*phys_offset);
     }
 
     minios_hal::println!("Hello, MiniOS!");
 
-    let mem = {
-        let _mem_guard = minios_trace::trace_span!("memory_init", module = "boot");
-        minios_memory::init(boot_info).expect("memory init failed")
-    };
+    let mem = minios_memory::init(boot_info).expect("memory init failed");
 
     minios_hal::serial_println!(
         "Memory: total frames = {}, free frames = {}",
@@ -61,14 +55,6 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     minios_hal::enable_interrupts();
     minios_hal::serial_println!("MiniOS: interrupts enabled");
-
-    let stats = minios_trace::TRACER.stats();
-    minios_hal::serial_println!(
-        "Trace: {} spans written, buffer {}/{}",
-        stats.total_spans_written,
-        stats.buffer_used,
-        stats.buffer_capacity
-    );
 
     minios_hal::cpu::hlt_loop();
 }
