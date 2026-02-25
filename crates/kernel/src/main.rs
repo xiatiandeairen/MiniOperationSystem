@@ -53,7 +53,12 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let v = vec![1, 2, 3];
     minios_hal::serial_println!("heap works: {:?}", v);
 
+    mem.publish_stats();
+
     init_filesystem();
+
+    test_syscalls();
+    test_ipc();
 
     init_processes();
 
@@ -64,10 +69,11 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     minios_hal::enable_interrupts();
     minios_hal::serial_println!("MiniOS: interrupts enabled, scheduler active");
 
-    minios_hal::cpu::hlt_loop();
+    minios_shell::run_shell();
 }
 
 /// Initialises the VFS, creates default directories, and runs a smoke test.
+/// Stores the VFS in the global static for shell access.
 fn init_filesystem() {
     let vfs = minios_fs::init();
     minios_hal::serial_println!("Filesystem initialized");
@@ -90,6 +96,8 @@ fn init_filesystem() {
         "fs read: {}",
         core::str::from_utf8(&buf[..n]).unwrap_or("<invalid utf8>")
     );
+
+    minios_fs::set_global_vfs(vfs);
 }
 
 /// Creates the idle task (PID 0) and init task (PID 1), registers them
@@ -197,6 +205,54 @@ fn idle_task() {
 fn init_task() {
     minios_hal::serial_println!("init process (PID 1) running");
     minios_hal::cpu::hlt_loop();
+}
+
+/// Smoke-tests the syscall dispatcher with uptime and getpid calls.
+fn test_syscalls() {
+    let uptime = minios_syscall::dispatch(minios_syscall::SYS_UPTIME, 0, 0, 0);
+    minios_hal::serial_println!("Uptime via syscall: {} ticks", uptime);
+
+    let pid = minios_syscall::dispatch(minios_syscall::SYS_GETPID, 0, 0, 0);
+    minios_hal::serial_println!("PID via syscall: {}", pid);
+
+    let msg = b"Hello from syscall write!\n";
+    let written = minios_syscall::dispatch(
+        minios_syscall::SYS_WRITE,
+        1,
+        msg.as_ptr() as u64,
+        msg.len() as u64,
+    );
+    minios_hal::serial_println!("sys_write returned: {}", written);
+
+    let unknown = minios_syscall::dispatch(999, 0, 0, 0);
+    minios_hal::serial_println!("Unknown syscall returned: {} (expected -1)", unknown);
+
+    minios_hal::serial_println!("Syscall subsystem OK");
+}
+
+/// Smoke-tests the IPC message queue: create, send, receive, destroy.
+fn test_ipc() {
+    use minios_common::id::Pid;
+
+    minios_ipc::init();
+
+    let mut mgr = minios_ipc::IPC_MANAGER.lock();
+
+    let qid = mgr.create_queue_mut(8).expect("ipc: create queue failed");
+    minios_hal::serial_println!("IPC: created queue {:?}", qid);
+
+    let msg = minios_ipc::Message::new(Pid(0), 1, b"ping");
+    mgr.send_message(qid, msg).expect("ipc: send failed");
+
+    let received = mgr.receive_message(qid).expect("ipc: receive failed");
+    minios_hal::serial_println!(
+        "IPC: received {} bytes, type={}",
+        received.data_len,
+        received.msg_type
+    );
+
+    mgr.destroy_queue_mut(qid).expect("ipc: destroy failed");
+    minios_hal::serial_println!("IPC subsystem OK");
 }
 
 #[panic_handler]
