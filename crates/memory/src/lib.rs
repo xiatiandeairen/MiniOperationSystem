@@ -38,12 +38,12 @@ pub struct MemoryManager {
 pub fn init(boot_info: &'static BootInfo) -> Result<MemoryManager, MemoryError> {
     let phys_offset = boot_info
         .physical_memory_offset
-        .into_option()
+        .as_ref()
         .ok_or(MemoryError::InvalidAddress)?;
 
     let frame_allocator = BitmapFrameAllocator::new(&boot_info.memory_regions);
 
-    let page_table_manager = unsafe { PageTableManager::new(phys_offset) };
+    let page_table_manager = unsafe { PageTableManager::new(*phys_offset) };
 
     heap::init_heap(&page_table_manager, &frame_allocator)?;
 
