@@ -50,12 +50,17 @@ All tasks are defined in `Makefile.toml`. Run via `cargo make <task>`:
   boot — they almost always indicate stack overflow.
 - **QEMU boot testing**: Use the `boot-image` tool then QEMU directly, not
   `cargo make run` (the Makefile's `run` task references a stale image name).
-  Correct command sequence:
+  Debug builds are too large for the BIOS bootloader (stage 2 panics). Use
+  **release builds** for QEMU testing:
   ```
-  cargo make build
-  ./tools/boot-image/target/x86_64-unknown-linux-gnu/release/boot-image target/x86_64-unknown-none/debug/minios-kernel
-  timeout 15 qemu-system-x86_64 -drive format=raw,file=target/x86_64-unknown-none/debug/minios-bios.img -nographic -m 256M -no-reboot -no-shutdown
+  cargo build --workspace --release -Z build-std=core,compiler_builtins,alloc -Z build-std-features=compiler-builtins-mem
+  ./tools/boot-image/target/x86_64-unknown-linux-gnu/release/boot-image target/x86_64-unknown-none/release/minios-kernel
+  timeout 15 qemu-system-x86_64 -drive format=raw,file=target/x86_64-unknown-none/release/minios-bios.img -nographic -m 256M -no-reboot -no-shutdown
   ```
+- **Shell keyboard input in QEMU**: The shell reads from the PS/2 keyboard
+  scancode port (0x60). In `-nographic` mode, terminal input goes to serial,
+  not the PS/2 keyboard. The shell will start but appear to hang waiting for
+  input. Use `-display gtk` or similar for interactive keyboard testing.
 
 ### Development workflow
 
