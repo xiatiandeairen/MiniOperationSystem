@@ -144,6 +144,11 @@ name = "minios-shell"
 version = "0.1.0"
 dependencies = [
  "minios-common",
+ "minios-fs",
+ "minios-hal",
+ "minios-memory",
+ "minios-process",
+ "minios-trace",
  "spin",
 ]
 
@@ -152,6 +157,9 @@ name = "minios-syscall"
 version = "0.1.0"
 dependencies = [
  "minios-common",
+ "minios-hal",
+ "minios-process",
+ "minios-scheduler",
  "spin",
 ]
 
