@@ -1,0 +1,59 @@
+//! Trace shell commands: trace list, trace stats, trace clear.
+
+use minios_common::traits::trace::Tracer;
+use minios_hal::println;
+
+/// Dispatches trace sub-commands.
+pub fn cmd_trace(args: &[&str]) {
+    let sub = if args.is_empty() { "help" } else { args[0] };
+
+    match sub {
+        "list" => trace_list(),
+        "stats" => trace_stats(),
+        "clear" => trace_clear(),
+        _ => println!("Usage: trace <list|stats|clear>"),
+    }
+}
+
+/// Shows the 10 most recent trace spans.
+fn trace_list() {
+    let mut buf: [minios_trace::Span; 10] = core::array::from_fn(|_| minios_trace::Span::default());
+    let n = minios_trace::TRACER.read_recent(10, &mut buf);
+    if n == 0 {
+        println!("No trace spans recorded.");
+        return;
+    }
+    println!(
+        "{:<8} {:<20} {:<16} {}",
+        "SPAN_ID", "NAME", "MODULE", "STATUS"
+    );
+    for span in &buf[..n] {
+        let status = match span.status {
+            minios_common::types::SpanStatus::Ok => "OK",
+            minios_common::types::SpanStatus::Error => "ERROR",
+            minios_common::types::SpanStatus::InProgress => "IN_PROGRESS",
+        };
+        println!(
+            "{:<8} {:<20} {:<16} {}",
+            span.span_id,
+            span.name_str(),
+            span.module_str(),
+            status,
+        );
+    }
+}
+
+/// Shows trace buffer statistics.
+fn trace_stats() {
+    let stats = minios_trace::TRACER.stats();
+    println!("Total spans written: {}", stats.total_spans_written);
+    println!("Buffer capacity:     {}", stats.buffer_capacity);
+    println!("Buffer used:         {}", stats.buffer_used);
+    println!("Active spans:        {}", stats.active_spans);
+}
+
+/// Clears the trace buffer.
+fn trace_clear() {
+    minios_trace::TRACER.clear();
+    println!("Trace buffer cleared.");
+}
