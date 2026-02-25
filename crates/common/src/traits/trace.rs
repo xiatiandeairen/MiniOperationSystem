@@ -1,7 +1,7 @@
 //! Trace engine contract.
 
 use crate::id::SpanId;
-use crate::types::{AttributeValue, SpanFilter, SpanStatus, TraceContext, TraceStats};
+use crate::types::{AttributeValue, SpanStatus, TraceContext, TraceStats};
 
 /// Core observability engine powering full-chain tracing.
 pub trait Tracer: Send + Sync {

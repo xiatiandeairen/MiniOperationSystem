@@ -12,7 +12,12 @@ pub trait FrameAllocator: Send + Sync {
 
 /// Virtual address space manipulation.
 pub trait VirtualMemoryManager: Send + Sync {
-    fn map_page(&self, virtual_addr: u64, physical_addr: u64, writable: bool) -> Result<(), MemoryError>;
+    fn map_page(
+        &self,
+        virtual_addr: u64,
+        physical_addr: u64,
+        writable: bool,
+    ) -> Result<(), MemoryError>;
     fn unmap_page(&self, virtual_addr: u64) -> Result<u64, MemoryError>;
     fn translate_addr(&self, virtual_addr: u64) -> Option<u64>;
 }

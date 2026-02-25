@@ -2,7 +2,7 @@
 
 use crate::error::FsError;
 use crate::id::{FileDescriptor, InodeId};
-use crate::types::{DirEntry, FileStat, InodeType, OpenFlags, SeekWhence};
+use crate::types::{FileStat, OpenFlags, SeekWhence};
 
 /// Virtual filesystem operations visible to userspace.
 pub trait FileSystem: Send + Sync {
