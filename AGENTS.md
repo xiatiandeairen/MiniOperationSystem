@@ -50,12 +50,21 @@ All tasks are defined in `Makefile.toml`. Run via `cargo make <task>`:
   boot — they almost always indicate stack overflow.
 - **QEMU boot testing**: Use the `boot-image` tool then QEMU directly, not
   `cargo make run` (the Makefile's `run` task references a stale image name).
-  Debug builds are too large for the BIOS bootloader (stage 2 panics). Use
-  **release builds** for QEMU testing:
+  Debug builds with full debug info (~8 MB+) exceed the BIOS bootloader
+  stage-2 limit and panic during kernel load. Either use **release builds**
+  or **strip the debug binary** before creating the image:
   ```
+  # Option A: release build
   cargo build --workspace --release -Z build-std=core,compiler_builtins,alloc -Z build-std-features=compiler-builtins-mem
   ./tools/boot-image/target/x86_64-unknown-linux-gnu/release/boot-image target/x86_64-unknown-none/release/minios-kernel
   timeout 15 qemu-system-x86_64 -drive format=raw,file=target/x86_64-unknown-none/release/minios-bios.img -nographic -m 256M -no-reboot -no-shutdown
+
+  # Option B: stripped debug build (preserves debug compile behavior)
+  cargo make build
+  cp target/x86_64-unknown-none/debug/minios-kernel target/x86_64-unknown-none/debug/minios-kernel.stripped
+  strip target/x86_64-unknown-none/debug/minios-kernel.stripped
+  ./tools/boot-image/target/x86_64-unknown-linux-gnu/release/boot-image target/x86_64-unknown-none/debug/minios-kernel.stripped
+  timeout 15 qemu-system-x86_64 -drive format=raw,file=target/x86_64-unknown-none/debug/minios-bios.img -nographic -m 256M -no-reboot -no-shutdown
   ```
 - **Shell keyboard input in QEMU**: The shell reads from the PS/2 keyboard
   scancode port (0x60). In `-nographic` mode, terminal input goes to serial,
