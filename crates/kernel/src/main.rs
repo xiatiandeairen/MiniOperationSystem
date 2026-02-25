@@ -174,7 +174,13 @@ fn on_timer_tick() {
     }
 }
 
-/// Handles a cooperative context switch between two tasks.
+/// Performs a real context switch: saves old registers, loads new registers.
+///
+/// The key insight is that `switch_context_asm` saves the callee-saved
+/// registers of the current execution flow into old_pid's CpuContext,
+/// then loads new_pid's CpuContext and jumps to its saved RIP.
+/// When old_pid is eventually switched back to, it resumes right after
+/// the `switch_context` call.
 fn handle_switch(old_pid: Pid, new_pid: Pid) {
     use minios_process::manager;
 
@@ -194,17 +200,30 @@ fn handle_switch(old_pid: Pid, new_pid: Pid) {
     }
 
     manager::set_current(new_pid);
+
+    let old_ctx = manager::context_ptr(old_pid);
+    let new_ctx = manager::context_ptr(new_pid);
+
+    if let (Some(old_ptr), Some(new_ptr)) = (old_ctx, new_ctx) {
+        // SAFETY: both pointers come from process table entries that
+        // are valid and pinned for the lifetime of the process.
+        unsafe { minios_process::context::switch_context(old_ptr, new_ptr) };
+    }
 }
 
-/// Idle task — simply halts until the next interrupt.
+/// Idle task — halts between interrupts, resumes when scheduled back.
 fn idle_task() {
-    minios_hal::cpu::hlt_loop();
+    loop {
+        minios_hal::cpu::hlt();
+    }
 }
 
-/// Init task — prints a message, then enters a halt loop.
+/// Init task — runs the shell after printing a startup message.
 fn init_task() {
     minios_hal::serial_println!("init process (PID 1) running");
-    minios_hal::cpu::hlt_loop();
+    loop {
+        minios_hal::cpu::hlt();
+    }
 }
 
 /// Smoke-tests the syscall dispatcher with uptime and getpid calls.
