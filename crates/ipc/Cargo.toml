@@ -1,0 +1,9 @@
+[package]
+name = "minios-ipc"
+version = "0.1.0"
+edition = "2021"
+description = "Inter-process communication for MiniOS"
+
+[dependencies]
+minios-common = { path = "../common" }
+spin = { workspace = true }

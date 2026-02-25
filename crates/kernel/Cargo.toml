@@ -1,0 +1,20 @@
+[package]
+name = "minios-kernel"
+version = "0.1.0"
+edition = "2021"
+description = "MiniOS kernel entry point and integration"
+
+[dependencies]
+minios-common = { path = "../common" }
+minios-hal = { path = "../hal" }
+minios-trace = { path = "../trace" }
+minios-trace-macros = { path = "../trace-macros" }
+minios-memory = { path = "../memory" }
+minios-interrupt = { path = "../interrupt" }
+minios-process = { path = "../process" }
+minios-scheduler = { path = "../scheduler" }
+minios-fs = { path = "../fs" }
+minios-ipc = { path = "../ipc" }
+minios-syscall = { path = "../syscall" }
+minios-shell = { path = "../shell" }
+bootloader_api = { workspace = true }

@@ -1,0 +1,9 @@
+[package]
+name = "minios-trace"
+version = "0.1.0"
+edition = "2021"
+description = "Trace engine with ring buffer storage for MiniOS"
+
+[dependencies]
+minios-common = { path = "../common" }
+spin = { workspace = true }

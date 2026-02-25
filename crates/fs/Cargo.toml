@@ -1,0 +1,9 @@
+[package]
+name = "minios-fs"
+version = "0.1.0"
+edition = "2021"
+description = "VFS and filesystem drivers for MiniOS"
+
+[dependencies]
+minios-common = { path = "../common" }
+spin = { workspace = true }

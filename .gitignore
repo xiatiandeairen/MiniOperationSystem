@@ -1,0 +1,5 @@
+/target/
+*.img
+*.bin
+serial.log
+trace-output.log

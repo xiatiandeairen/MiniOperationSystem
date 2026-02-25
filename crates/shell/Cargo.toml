@@ -1,0 +1,9 @@
+[package]
+name = "minios-shell"
+version = "0.1.0"
+edition = "2021"
+description = "Interactive terminal shell for MiniOS"
+
+[dependencies]
+minios-common = { path = "../common" }
+spin = { workspace = true }

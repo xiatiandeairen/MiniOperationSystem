@@ -1,0 +1,11 @@
+[package]
+name = "minios-memory"
+version = "0.1.0"
+edition = "2021"
+description = "Physical and virtual memory management for MiniOS"
+
+[dependencies]
+minios-common = { path = "../common" }
+x86_64 = { workspace = true }
+spin = { workspace = true }
+linked_list_allocator = { workspace = true }
