@@ -1,0 +1,98 @@
+[tasks.build]
+description = "Compile all workspace crates"
+command = "cargo"
+args = ["build", "--workspace"]
+
+[tasks.build-release]
+description = "Compile in release mode"
+command = "cargo"
+args = ["build", "--workspace", "--release"]
+
+[tasks.test]
+description = "Run all tests on the host"
+command = "cargo"
+args = ["test", "--workspace", "--lib"]
+
+[tasks.clippy]
+description = "Lint all crates"
+command = "cargo"
+args = ["clippy", "--workspace", "--", "-D", "warnings"]
+
+[tasks.fmt]
+description = "Format all source files"
+command = "cargo"
+args = ["fmt", "--all"]
+
+[tasks.fmt-check]
+description = "Check formatting without modifying files"
+command = "cargo"
+args = ["fmt", "--all", "--check"]
+
+[tasks.check]
+description = "Quick type-check without linking"
+command = "cargo"
+args = ["check", "--workspace"]
+
+[tasks.doc]
+description = "Generate API documentation"
+command = "cargo"
+args = ["doc", "--workspace", "--no-deps"]
+
+[tasks.clean]
+description = "Remove build artifacts"
+command = "cargo"
+args = ["clean"]
+
+[tasks.run]
+description = "Build and boot in QEMU"
+dependencies = ["build"]
+script = '''
+qemu-system-x86_64 \
+    -drive format=raw,file=target/x86_64-unknown-none/debug/boot-bios-minios-kernel.img \
+    -serial stdio \
+    -m 128M \
+    -no-reboot \
+    -no-shutdown \
+    -display none
+'''
+
+[tasks.run-display]
+description = "Build and boot in QEMU with VGA display"
+dependencies = ["build"]
+script = '''
+qemu-system-x86_64 \
+    -drive format=raw,file=target/x86_64-unknown-none/debug/boot-bios-minios-kernel.img \
+    -serial stdio \
+    -m 128M \
+    -no-reboot \
+    -no-shutdown
+'''
+
+[tasks.run-trace]
+description = "Boot and capture trace data to file"
+dependencies = ["build"]
+script = '''
+qemu-system-x86_64 \
+    -drive format=raw,file=target/x86_64-unknown-none/debug/boot-bios-minios-kernel.img \
+    -serial file:trace-output.log \
+    -m 128M \
+    -no-reboot \
+    -no-shutdown \
+    -display none
+'''
+
+[tasks.debug]
+description = "Boot in QEMU and wait for GDB connection"
+dependencies = ["build"]
+script = '''
+qemu-system-x86_64 \
+    -drive format=raw,file=target/x86_64-unknown-none/debug/boot-bios-minios-kernel.img \
+    -serial stdio \
+    -m 128M \
+    -s -S \
+    -no-reboot
+'''
+
+[tasks.ci]
+description = "Run all CI checks"
+dependencies = ["fmt-check", "clippy", "test"]
