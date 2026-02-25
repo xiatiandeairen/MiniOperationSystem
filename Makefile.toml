@@ -5,6 +5,7 @@ args = ["build", "--workspace", "-Z", "build-std=core,compiler_builtins,alloc",
         "-Z", "build-std-features=compiler-builtins-mem"]
 
 [tasks.build-release]
+workspace = false
 description = "Compile in release mode"
 command = "cargo"
 args = ["build", "--workspace", "--release",
@@ -52,52 +53,73 @@ description = "Remove build artifacts"
 command = "cargo"
 args = ["clean"]
 
-[tasks.run]
-description = "Build and boot in QEMU"
-dependencies = ["build"]
+[tasks.image]
+workspace = false
+description = "Build boot-image tool (first time only)"
 script = '''
-qemu-system-x86_64 \
-    -drive format=raw,file=target/x86_64-unknown-none/debug/boot-bios-minios-kernel.img \
-    -serial stdio \
-    -m 128M \
-    -no-reboot \
-    -no-shutdown \
-    -display none
+if [ ! -f tools/boot-image/target/x86_64-unknown-linux-gnu/release/boot-image ]; then
+    cd tools/boot-image && cargo +nightly build --release --target x86_64-unknown-linux-gnu
+fi
 '''
 
-[tasks.run-display]
-description = "Build and boot in QEMU with VGA display"
-dependencies = ["build"]
+[tasks.boot-img]
+workspace = false
+description = "Create bootable disk image from kernel ELF"
+dependencies = ["build-release", "image"]
+script = '''
+./tools/boot-image/target/x86_64-unknown-linux-gnu/release/boot-image \
+    target/x86_64-unknown-none/release/minios-kernel
+'''
+
+[tasks.run]
+workspace = false
+description = "One-command: build + create image + boot in QEMU (serial on stdout)"
+dependencies = ["boot-img"]
 script = '''
 qemu-system-x86_64 \
-    -drive format=raw,file=target/x86_64-unknown-none/debug/boot-bios-minios-kernel.img \
+    -drive format=raw,file=target/x86_64-unknown-none/release/minios-bios.img \
+    -nographic \
+    -m 256M \
+    -no-reboot \
+    -no-shutdown
+'''
+
+[tasks.run-gui]
+workspace = false
+description = "Boot with QEMU graphical window + serial on stdout"
+dependencies = ["boot-img"]
+script = '''
+qemu-system-x86_64 \
+    -drive format=raw,file=target/x86_64-unknown-none/release/minios-bios.img \
     -serial stdio \
-    -m 128M \
+    -m 256M \
     -no-reboot \
     -no-shutdown
 '''
 
 [tasks.run-trace]
+workspace = false
 description = "Boot and capture trace data to file"
-dependencies = ["build"]
+dependencies = ["boot-img"]
 script = '''
 qemu-system-x86_64 \
-    -drive format=raw,file=target/x86_64-unknown-none/debug/boot-bios-minios-kernel.img \
+    -drive format=raw,file=target/x86_64-unknown-none/release/minios-bios.img \
     -serial file:trace-output.log \
-    -m 128M \
+    -m 256M \
     -no-reboot \
     -no-shutdown \
     -display none
 '''
 
 [tasks.debug]
-description = "Boot in QEMU and wait for GDB connection"
-dependencies = ["build"]
+workspace = false
+description = "Boot and wait for GDB connection on port 1234"
+dependencies = ["boot-img"]
 script = '''
 qemu-system-x86_64 \
-    -drive format=raw,file=target/x86_64-unknown-none/debug/boot-bios-minios-kernel.img \
+    -drive format=raw,file=target/x86_64-unknown-none/release/minios-bios.img \
     -serial stdio \
-    -m 128M \
+    -m 256M \
     -s -S \
     -no-reboot
 '''
