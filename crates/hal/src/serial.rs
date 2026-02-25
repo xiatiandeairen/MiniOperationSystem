@@ -15,6 +15,14 @@ pub fn init() {
     SERIAL1.lock().init();
 }
 
+/// Non-blocking read of one byte from the serial port.
+///
+/// Returns `Some(byte)` if data is available, `None` otherwise.
+/// Interrupts are disabled for the duration of the read to prevent deadlocks.
+pub fn read_byte() -> Option<u8> {
+    x86_64::instructions::interrupts::without_interrupts(|| SERIAL1.lock().try_receive().ok())
+}
+
 /// Writes formatted arguments to the serial port.
 ///
 /// This is the implementation detail behind [`serial_print!`] and
