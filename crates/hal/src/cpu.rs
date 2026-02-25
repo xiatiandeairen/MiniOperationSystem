@@ -13,6 +13,12 @@ pub fn hlt_loop() -> ! {
     }
 }
 
+/// Executes a single `HLT` instruction, suspending the CPU until the
+/// next interrupt fires, then returns control to the caller.
+pub fn hlt() {
+    x86_64::instructions::hlt();
+}
+
 /// Reads the CPU Time Stamp Counter via the `RDTSC` instruction.
 ///
 /// Returns a monotonically increasing 64-bit tick count. The counter

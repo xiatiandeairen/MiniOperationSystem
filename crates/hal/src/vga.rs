@@ -147,6 +147,24 @@ pub fn init_with_offset(physical_memory_offset: u64) {
     writer.row_position = 0;
 }
 
+/// Clears the entire VGA screen and resets the cursor to the top-left.
+pub fn clear_screen() {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let mut writer = WRITER.lock();
+        let blank = ScreenChar {
+            ascii_character: b' ',
+            color_code: writer.color_code,
+        };
+        for row in 0..BUFFER_HEIGHT {
+            for col in 0..BUFFER_WIDTH {
+                writer.cell(row, col).write(blank);
+            }
+        }
+        writer.column_position = 0;
+        writer.row_position = 0;
+    });
+}
+
 /// Writes formatted arguments to the VGA buffer (implementation detail).
 ///
 /// Interrupts are disabled for the duration to prevent deadlocks.
