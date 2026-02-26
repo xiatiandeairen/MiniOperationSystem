@@ -18,6 +18,7 @@ pub fn cmd_explain(args: &[&str]) {
         "sched" => explain_sched(),
         "pagetable" => explain_pagetable(),
         "frames" => explain_frames(),
+        "log" => explain_log(),
         other => println!("No explanation available for '{}'.", other),
     }
     super::journey::mark(super::journey::STEP_EXPLAIN);
@@ -150,4 +151,27 @@ fn explain_frames() {
     println!("allocate_frame(): scan bitmap for first clear bit, set it.");
     println!("deallocate_frame(): check bit is set, then clear it.");
     println!("  (Double-free is detected and returns an error.)");
+}
+
+fn explain_log() {
+    println!("=== How kernel logging works ===");
+    println!();
+    println!("5 log levels (most to least severe):");
+    println!("  ERROR — something failed, system may be degraded");
+    println!("  WARN  — unexpected but recoverable situation");
+    println!("  INFO  — significant events (default visible level)");
+    println!("  DEBUG — detailed internal state for debugging");
+    println!("  TRACE — every operation, very verbose");
+    println!();
+    println!("The current level filters out messages below it.");
+    println!("Example: level=INFO shows ERROR, WARN, INFO but hides DEBUG, TRACE.");
+    println!();
+    println!("Module filter restricts output to one subsystem:");
+    println!("  'log module memory' — only memory subsystem logs");
+    println!("  'log module all'    — show all modules (default)");
+    println!();
+    println!("Log entries are stored in a 256-entry ring buffer.");
+    println!("Use 'log history 10' to see the last 10 entries.");
+    println!();
+    println!("Tip: 'debug on' enables TRACE level for all modules.");
 }

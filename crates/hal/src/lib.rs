@@ -12,6 +12,7 @@ pub mod framebuffer;
 pub mod gdt;
 pub mod interrupts;
 pub mod keyboard;
+pub mod log;
 mod pic;
 pub mod serial;
 pub mod vga;

@@ -82,6 +82,102 @@ pub fn cmd_meminfo(_args: &[&str]) {
     super::journey::mark(super::journey::STEP_MEMINFO);
 }
 
+/// Controls the kernel log system.
+pub fn cmd_log(args: &[&str]) {
+    if args.is_empty() {
+        println!("Usage: log <level|module|history|off> [value]");
+        println!("  log level <error|warn|info|debug|trace>");
+        println!("  log module <name|all>");
+        println!("  log history [count]");
+        println!("  log off");
+        println!(
+            "Current: level={}, module=all",
+            minios_hal::log::current_level().as_str()
+        );
+        return;
+    }
+    match args[0] {
+        "level" => {
+            if args.len() < 2 {
+                println!("Current: {}", minios_hal::log::current_level().as_str());
+                return;
+            }
+            match minios_hal::log::LogLevel::from_str(args[1]) {
+                Some(l) => {
+                    minios_hal::log::set_level(l);
+                    println!("Log level: {}", l.as_str());
+                }
+                None => println!("Unknown level. Use: error, warn, info, debug, trace"),
+            }
+        }
+        "module" => {
+            if args.len() < 2 {
+                println!("Usage: log module <name|all>");
+                return;
+            }
+            minios_hal::log::set_module_filter(args[1]);
+            println!("Log module filter: {}", args[1]);
+        }
+        "history" => {
+            let count = if args.len() > 1 {
+                args[1]
+                    .bytes()
+                    .fold(0usize, |acc, b| {
+                        if b.is_ascii_digit() {
+                            acc * 10 + (b - b'0') as usize
+                        } else {
+                            acc
+                        }
+                    })
+                    .max(1)
+            } else {
+                20
+            };
+            let entries = minios_hal::log::recent_logs(count);
+            for e in &entries {
+                println!(
+                    "[{}] [{}] {}",
+                    e.level.as_str(),
+                    e.module_str(),
+                    e.message_str()
+                );
+            }
+            if entries.is_empty() {
+                println!("(no log entries)");
+            }
+        }
+        "off" => {
+            minios_hal::log::set_level(minios_hal::log::LogLevel::Error);
+            println!("Logging minimized (errors only).");
+        }
+        _ => println!("Unknown log subcommand. Try: level, module, history, off"),
+    }
+}
+
+/// Toggles debug mode (trace-level logging for all modules).
+pub fn cmd_debug(args: &[&str]) {
+    if args.is_empty() || args[0] == "status" {
+        println!(
+            "Debug mode: log level = {}",
+            minios_hal::log::current_level().as_str()
+        );
+        return;
+    }
+    match args[0] {
+        "on" => {
+            minios_hal::log::set_level(minios_hal::log::LogLevel::Trace);
+            minios_hal::log::set_module_filter("all");
+            println!("Debug mode ON — all logs visible (level=TRACE, module=all)");
+        }
+        "off" => {
+            minios_hal::log::set_level(minios_hal::log::LogLevel::Info);
+            minios_hal::log::set_module_filter("all");
+            println!("Debug mode OFF — normal logging (level=INFO)");
+        }
+        _ => println!("Usage: debug <on|off|status>"),
+    }
+}
+
 /// Reads a file and executes each line as a shell command.
 pub fn cmd_run(args: &[&str]) {
     if args.is_empty() {

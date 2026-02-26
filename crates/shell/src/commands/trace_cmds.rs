@@ -1,9 +1,14 @@
-//! Trace shell commands: trace list, tree, stats, clear, export, follow.
+//! Trace shell commands: trace list, tree, stats, clear, export, follow, filter.
 
 extern crate alloc;
 
+use core::sync::atomic::{AtomicUsize, Ordering};
 use minios_common::traits::trace::Tracer;
 use minios_hal::println;
+use spin::Mutex;
+
+static TRACE_MODULE_FILTER: Mutex<[u8; 32]> = Mutex::new([0u8; 32]);
+static TRACE_FILTER_LEN: AtomicUsize = AtomicUsize::new(0);
 
 /// Returns a brief teaching description for known span names.
 fn describe_span(name: &str) -> &'static str {
@@ -50,7 +55,64 @@ pub fn cmd_trace(args: &[&str]) {
             trace_follow(&args[1..]);
             super::journey::mark(super::journey::STEP_TRACE_FOLLOW);
         }
-        _ => println!("Usage: trace <list|tree|stats|clear|export|follow>"),
+        "filter" => trace_filter(&args[1..]),
+        _ => println!("Usage: trace <list|tree|stats|clear|export|follow|filter>"),
+    }
+}
+
+/// Sets the trace module filter.
+fn set_trace_module_filter(module: &str) {
+    let mut filter = TRACE_MODULE_FILTER.lock();
+    let len = module.len().min(31);
+    filter[..len].copy_from_slice(&module.as_bytes()[..len]);
+    TRACE_FILTER_LEN.store(len, Ordering::Relaxed);
+}
+
+/// Returns `true` if the span passes the current module filter.
+fn should_show_span(span: &minios_trace::Span) -> bool {
+    let len = TRACE_FILTER_LEN.load(Ordering::Relaxed);
+    if len == 0 {
+        return true;
+    }
+    let filter = TRACE_MODULE_FILTER.lock();
+    let filter_str = core::str::from_utf8(&filter[..len]).unwrap_or("");
+    if filter_str == "all" {
+        return true;
+    }
+    span.module_str() == filter_str
+}
+
+/// Handles the `trace filter` sub-command.
+fn trace_filter(args: &[&str]) {
+    if args.is_empty() {
+        let len = TRACE_FILTER_LEN.load(Ordering::Relaxed);
+        let current = if len == 0 {
+            "all (no filtering)"
+        } else {
+            let filter = TRACE_MODULE_FILTER.lock();
+            let s = core::str::from_utf8(&filter[..len]).unwrap_or("?");
+            if s == "all" {
+                "all (no filtering)"
+            } else {
+                // We can't return a reference to locked data, so print inline
+                println!("Usage: trace filter <module|all>");
+                println!("Filters trace list/tree to show only matching module.");
+                println!("Current filter: '{}'", s);
+                return;
+            }
+        };
+        println!("Usage: trace filter <module|all>");
+        println!("Filters trace list/tree to show only matching module.");
+        println!("Current filter: {}", current);
+        return;
+    }
+    let module = args[0];
+    if module == "all" {
+        set_trace_module_filter("");
+        println!("Trace filter cleared \u{2014} showing all modules.");
+    } else {
+        set_trace_module_filter(module);
+        println!("Trace filter set: only showing module '{}'", module);
     }
 }
 
@@ -67,6 +129,9 @@ fn trace_list() {
         "SPAN_ID", "NAME", "MODULE", "STATUS"
     );
     for span in &buf[..n] {
+        if !should_show_span(span) {
+            continue;
+        }
         let status = match span.status {
             minios_common::types::SpanStatus::Ok => "OK",
             minios_common::types::SpanStatus::Error => "ERROR",
@@ -91,6 +156,9 @@ fn trace_tree() {
         return;
     }
     for span in &buf[..n] {
+        if !should_show_span(span) {
+            continue;
+        }
         let indent = "  ".repeat(span.depth as usize);
         let duration = span.end_tsc.saturating_sub(span.start_tsc);
         let status = match span.status {
@@ -125,14 +193,25 @@ fn trace_tree() {
 /// Clears the trace buffer, executes a command, then displays the resulting trace tree.
 fn trace_follow(args: &[&str]) {
     if args.is_empty() {
-        println!("Usage: trace follow <command> [args...]");
+        println!("Usage: trace follow <command> [args...] [--filter <module>]");
         return;
+    }
+
+    let mut cmd_args_end = args.len();
+    let mut filter_module: Option<&str> = None;
+    if args.len() >= 3 && args[args.len() - 2] == "--filter" {
+        filter_module = Some(args[args.len() - 1]);
+        cmd_args_end = args.len() - 2;
     }
 
     minios_trace::TRACER.clear();
 
     let cmd_name = args[0];
-    let cmd_args = if args.len() > 1 { &args[1..] } else { &[] };
+    let cmd_args = if cmd_args_end > 1 {
+        &args[1..cmd_args_end]
+    } else {
+        &[]
+    };
     match super::find_command(cmd_name) {
         Some(command) => (command.handler)(cmd_args),
         None => {
@@ -145,6 +224,11 @@ fn trace_follow(args: &[&str]) {
     let mut buf: [minios_trace::Span; 32] = core::array::from_fn(|_| minios_trace::Span::default());
     let n = minios_trace::TRACER.read_recent(32, &mut buf);
     for span in &buf[..n] {
+        if let Some(m) = filter_module {
+            if span.module_str() != m {
+                continue;
+            }
+        }
         let indent = "  ".repeat(span.depth as usize);
         let duration = span.end_tsc.saturating_sub(span.start_tsc);
         let desc = describe_span(span.name_str());

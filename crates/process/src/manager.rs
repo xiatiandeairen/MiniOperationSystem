@@ -90,6 +90,14 @@ pub fn create_kernel_task(
         .ok_or(ProcessError::MaxProcessesReached)?;
     table.slots[slot] = Some(proc);
 
+    minios_hal::klog!(
+        Info,
+        "process",
+        "created task '{}' with PID {}",
+        name,
+        pid.0
+    );
+
     Ok(pid)
 }
 
@@ -101,6 +109,7 @@ pub fn exit_current(_code: i32) {
             p.state = ProcessState::Terminated;
         }
     }
+    minios_hal::klog!(Info, "process", "process exited");
 }
 
 /// Returns the PID of the currently running process.

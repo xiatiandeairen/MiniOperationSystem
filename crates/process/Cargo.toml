@@ -6,4 +6,5 @@ description = "Process and thread management for MiniOS"
 
 [dependencies]
 minios-common = { path = "../common" }
+minios-hal = { path = "../hal" }
 spin = { workspace = true }

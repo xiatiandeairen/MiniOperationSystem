@@ -94,6 +94,7 @@ name = "minios-ipc"
 version = "0.1.0"
 dependencies = [
  "minios-common",
+ "minios-hal",
  "spin",
 ]
 
@@ -123,6 +124,7 @@ dependencies = [
  "bootloader_api",
  "linked_list_allocator",
  "minios-common",
+ "minios-hal",
  "spin",
  "x86_64",
 ]
@@ -132,6 +134,7 @@ name = "minios-process"
 version = "0.1.0"
 dependencies = [
  "minios-common",
+ "minios-hal",
  "spin",
 ]
 
@@ -140,6 +143,7 @@ name = "minios-scheduler"
 version = "0.1.0"
 dependencies = [
  "minios-common",
+ "minios-hal",
  "spin",
 ]
 

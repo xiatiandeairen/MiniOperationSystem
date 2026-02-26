@@ -3,6 +3,8 @@
 //! The heap is placed at a fixed virtual address range and mapped to
 //! physical frames on demand during initialisation.
 
+extern crate alloc;
+
 use linked_list_allocator::LockedHeap;
 use x86_64::structures::paging::{Page, PageTableFlags, PhysFrame, Size4KiB};
 use x86_64::{PhysAddr, VirtAddr};
@@ -60,6 +62,14 @@ pub fn init_heap(
     unsafe {
         ALLOCATOR.lock().init(HEAP_START as *mut u8, HEAP_SIZE);
     }
+
+    minios_hal::klog!(
+        Info,
+        "memory",
+        "heap initialized: {} bytes at {:#x}",
+        HEAP_SIZE,
+        HEAP_START
+    );
 
     Ok(())
 }

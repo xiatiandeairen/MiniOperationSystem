@@ -6,4 +6,5 @@ description = "Inter-process communication for MiniOS"
 
 [dependencies]
 minios-common = { path = "../common" }
+minios-hal = { path = "../hal" }
 spin = { workspace = true }
