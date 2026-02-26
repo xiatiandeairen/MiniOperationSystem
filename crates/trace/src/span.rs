@@ -247,4 +247,30 @@ mod tests {
         assert_eq!(copy.end_tsc, span.end_tsc);
         assert_eq!(copy.status, span.status);
     }
+
+    #[test]
+    fn span_no_parent() {
+        let span = Span::new("root", "kern", TraceId(1), SpanId(1), None, 0, 0);
+        assert!(span.parent_span_id.is_none());
+    }
+
+    #[test]
+    fn span_high_depth() {
+        let span = Span::new("deep", "m", TraceId(1), SpanId(1), None, 0, u16::MAX);
+        assert_eq!(span.depth, u16::MAX);
+    }
+
+    #[test]
+    fn span_large_pid() {
+        let span = Span::new("op", "m", TraceId(1), SpanId(1), None, u32::MAX, 0);
+        assert_eq!(span.pid, u32::MAX);
+    }
+
+    #[test]
+    fn default_span_name_is_empty() {
+        let span = Span::default();
+        assert!(span.name_str().is_empty());
+        assert!(span.module_str().is_empty());
+        assert_eq!(span.start_tsc, 0);
+    }
 }

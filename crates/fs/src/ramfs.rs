@@ -117,6 +117,18 @@ fn validate_parent(
 }
 
 impl RamFs {
+    /// Returns (inode_count, total_data_bytes, directory_count).
+    pub fn storage_stats(&self) -> (usize, usize, usize) {
+        let inodes = self.inodes.lock();
+        let count = inodes.len();
+        let total_bytes: usize = inodes.values().map(|i| i.data.len()).sum();
+        let dirs = inodes
+            .values()
+            .filter(|i| i.inode_type == InodeType::Directory)
+            .count();
+        (count, total_bytes, dirs)
+    }
+
     /// Returns the names and types of all children of a directory inode.
     pub fn list_dir(&self, inode: InodeId) -> Result<Vec<(String, InodeType)>, FsError> {
         let inodes = self.inodes.lock();

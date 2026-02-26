@@ -14,6 +14,7 @@ pub mod lab;
 pub mod man;
 pub mod mem_cmds;
 pub mod proc_cmds;
+pub mod quiz;
 pub mod sched_cmds;
 pub mod text;
 pub mod trace_cmds;
@@ -282,6 +283,41 @@ static COMMANDS: &[Command] = &[
         name: "version",
         description: "Show MiniOS version and system information",
         handler: basic::cmd_version,
+    },
+    Command {
+        name: "sleep",
+        description: "Sleep for N ticks (default 100)",
+        handler: basic::cmd_sleep,
+    },
+    Command {
+        name: "quiz",
+        description: "OS knowledge quiz (process, memory, fs)",
+        handler: quiz::cmd_quiz,
+    },
+    Command {
+        name: "challenge",
+        description: "Verifiable learning challenges (create-file, find-pid, memory-check)",
+        handler: quiz::cmd_challenge,
+    },
+    Command {
+        name: "session",
+        description: "Export current learning session summary",
+        handler: basic::cmd_export_session,
+    },
+    Command {
+        name: "cheatsheet",
+        description: "Quick reference card of all command categories",
+        handler: basic::cmd_cheatsheet,
+    },
+    Command {
+        name: "df",
+        description: "Show RamFS storage statistics",
+        handler: fs_cmds::cmd_df,
+    },
+    Command {
+        name: "faq",
+        description: "Answer common learner questions",
+        handler: basic::cmd_faq,
     },
 ];
 

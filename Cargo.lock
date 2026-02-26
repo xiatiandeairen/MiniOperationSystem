@@ -64,6 +64,7 @@ dependencies = [
  "minios-common",
  "minios-hal",
  "minios-memory",
+ "minios-process",
  "minios-scheduler",
  "minios-trace",
  "spin",

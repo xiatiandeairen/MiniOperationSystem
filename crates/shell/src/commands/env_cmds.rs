@@ -76,6 +76,18 @@ pub fn cmd_set(args: &[&str]) {
     println!("{}={}", args[0], args[1]);
 }
 
+/// Looks up a variable and returns its value (or empty string).
+pub fn get_var(key: &str) -> alloc::string::String {
+    let env = ENV.lock();
+    for v in env.vars.iter().flatten() {
+        if v.key[..v.key_len] == *key.as_bytes() {
+            let val = core::str::from_utf8(&v.val[..v.val_len]).unwrap_or("");
+            return alloc::string::String::from(val);
+        }
+    }
+    alloc::string::String::new()
+}
+
 /// `env` — list all environment variables.
 pub fn cmd_env(_args: &[&str]) {
     let env = ENV.lock();

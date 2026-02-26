@@ -3,7 +3,7 @@
 extern crate alloc;
 
 use core::sync::atomic::{AtomicU64, Ordering};
-use minios_hal::{println, serial_println};
+use minios_hal::println;
 
 static SNAPSHOT_FRAMES: AtomicU64 = AtomicU64::new(0);
 static SNAPSHOT_HEAP: AtomicU64 = AtomicU64::new(0);
@@ -40,12 +40,40 @@ pub fn cmd_clear(_args: &[&str]) {
     });
 }
 
-/// Shows the number of timer ticks since boot.
+/// Shows uptime in human-readable minutes and seconds.
 pub fn cmd_uptime(_args: &[&str]) {
     let ticks = minios_hal::interrupts::tick_count();
-    println!("Uptime: {} ticks", ticks);
-    serial_println!("Uptime: {} ticks", ticks);
+    let seconds = ticks / 100;
+    let minutes = seconds / 60;
+    println!("Uptime: {}m {}s ({} ticks)", minutes, seconds % 60, ticks);
     super::journey::mark(super::journey::STEP_UPTIME);
+}
+
+/// Sleeps for the specified number of ticks (default 100).
+pub fn cmd_sleep(args: &[&str]) {
+    let ticks = if args.is_empty() {
+        100
+    } else {
+        args[0]
+            .bytes()
+            .fold(0u64, |a, b| {
+                if b.is_ascii_digit() {
+                    a * 10 + (b - b'0') as u64
+                } else {
+                    a
+                }
+            })
+            .max(1)
+    };
+    let start = minios_hal::interrupts::tick_count();
+    println!("Sleeping for {} ticks...", ticks);
+    while minios_hal::interrupts::tick_count() - start < ticks {
+        minios_hal::cpu::hlt();
+    }
+    println!(
+        "Awake! (slept {} ticks)",
+        minios_hal::interrupts::tick_count() - start
+    );
 }
 
 /// Shows interrupt statistics (timer and keyboard counters).
@@ -187,7 +215,7 @@ pub fn cmd_debug(args: &[&str]) {
 
 /// Displays MiniOS version and system information.
 pub fn cmd_version(_args: &[&str]) {
-    println!("MiniOS v0.26.0");
+    println!("MiniOS v1.0");
     println!("Architecture: x86-64 (bare metal)");
     println!("Shell commands: {}", super::list_commands().len());
     println!("Subsystems: HAL, Trace, Memory, Process, Scheduler, FS, IPC, Syscall, Shell");
@@ -367,6 +395,65 @@ pub fn cmd_run(args: &[&str]) {
         }
     }
     super::journey::mark(super::journey::STEP_RUN);
+}
+
+/// Exports a summary of the current learning session.
+pub fn cmd_export_session(_args: &[&str]) {
+    println!("=== Session Export ===");
+    let hist_count = crate::shell::HISTORY.lock().len();
+    println!("Commands executed: {}", hist_count);
+    for i in 0..hist_count {
+        if let Some(cmd) = crate::shell::HISTORY.lock().get(i) {
+            println!("  {}. {}", i + 1, cmd);
+        }
+    }
+    println!();
+    let completed = crate::commands::journey::completed_count();
+    println!("Journey progress: {}/17 steps", completed);
+    println!("---");
+}
+
+/// Prints a quick reference card of all MiniOS command categories.
+pub fn cmd_cheatsheet(_args: &[&str]) {
+    println!("+---------------------------------------+");
+    println!("|     MiniOS Quick Reference Card       |");
+    println!("+---------------------------------------+");
+    println!("| LEARN    tutorial explain compare lab |");
+    println!("| PROCESS  ps spawn kill signal sched   |");
+    println!("| MEMORY   meminfo frames pagetable     |");
+    println!("| FILES    ls cat mkdir write touch rm   |");
+    println!("| TRACE    trace follow/tree/filter/log  |");
+    println!("| TEST     crash lab bench               |");
+    println!("| SCRIPT   run each repeat alias history |");
+    println!("| TEXT     head grep wc                   |");
+    println!("| STATUS   top uptime interrupts version |");
+    println!("| HELP     help man explain cheatsheet   |");
+    println!("+---------------------------------------+");
+}
+
+/// Answers common learner questions about MiniOS.
+pub fn cmd_faq(_args: &[&str]) {
+    println!("=== Frequently Asked Questions ===");
+    println!();
+    println!("Q: How do I start learning?");
+    println!("A: Type 'tutorial' for a guided 10-step walkthrough.");
+    println!();
+    println!("Q: What does 'explain' do?");
+    println!("A: Shows how a command works internally without running it.");
+    println!();
+    println!("Q: Can I break the system?");
+    println!("A: Yes! 'crash oom' safely demonstrates failures. Try it!");
+    println!();
+    println!("Q: How do I see what the OS is doing internally?");
+    println!("A: 'trace follow <cmd>' shows every system call in a command.");
+    println!("   'log level debug' enables detailed kernel logging.");
+    println!();
+    println!("Q: How do I track my progress?");
+    println!("A: 'journey' shows your learning path. 'graduation' for final report.");
+    println!();
+    println!("Q: Is this a real operating system?");
+    println!("A: Yes! It boots on real x86-64 hardware (via QEMU). It has real");
+    println!("   memory management, process scheduling, and a filesystem.");
 }
 
 /// Prints a structured course outline for using MiniOS as a teaching tool.

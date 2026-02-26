@@ -106,20 +106,18 @@ impl FramebufferConsole {
         }
     }
 
+    /// Scrolls the framebuffer up by one text row using bulk `copy_within`.
     fn scroll_up(&mut self) {
         let row_bytes = self.stride * self.bytes_per_pixel * FONT_HEIGHT;
         let total = self.stride * self.bytes_per_pixel * self.height;
         self.buffer.copy_within(row_bytes..total, 0);
-        let clear_start = total - row_bytes;
-        for y in 0..FONT_HEIGHT {
-            for x in 0..self.width {
-                let base =
-                    clear_start + y * self.stride * self.bytes_per_pixel + x * self.bytes_per_pixel;
-                if base + 2 < self.buffer.len() {
-                    self.buffer[base] = self.bg[0];
-                    self.buffer[base + 1] = self.bg[1];
-                    self.buffer[base + 2] = self.bg[2];
-                }
+        // Clear last row with background color using stride-aware iteration
+        let start = total - row_bytes;
+        for i in (start..total).step_by(self.bytes_per_pixel) {
+            if i + 2 < self.buffer.len() {
+                self.buffer[i] = self.bg[0];
+                self.buffer[i + 1] = self.bg[1];
+                self.buffer[i + 2] = self.bg[2];
             }
         }
     }
