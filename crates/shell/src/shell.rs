@@ -1,8 +1,11 @@
 //! Shell main loop: prompt, read, parse, dispatch.
 
+extern crate alloc;
+
 use crate::commands;
 use crate::input::LineBuffer;
 use crate::parser;
+use alloc::vec::Vec;
 use minios_hal::{print, println, serial_println};
 use spin::Mutex;
 
@@ -119,7 +122,7 @@ fn print_prompt() {
 pub fn run_shell() -> ! {
     crate::commands::env_cmds::init_defaults();
 
-    println!("MiniOS Shell v0.4");
+    println!("MiniOS Shell v0.6");
     println!("Type 'tutorial' to start learning, or 'help' for all commands.\n");
     serial_println!("Shell started");
 
@@ -162,21 +165,160 @@ pub fn run_shell() -> ! {
 
         serial_println!("shell> {}", line);
 
-        let parsed = parser::parse(line);
-        if parsed.is_empty() {
+        // Pipe operator: capture left-side output and feed to right-side
+        if line.contains(" | ") {
+            execute_pipe(line);
             continue;
         }
 
-        let cmd_name = parsed.command();
-        let args = parsed.args();
+        dispatch_line(line);
+    }
+}
 
-        match commands::find_command(cmd_name) {
-            Some(command) => (command.handler)(args),
-            None => {
-                minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::RED);
-                println!("Unknown command: {}", cmd_name);
-                minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
+/// Dispatches a single command line (with alias resolution).
+fn dispatch_line(line: &str) {
+    let parsed = parser::parse(line);
+    if parsed.is_empty() {
+        return;
+    }
+
+    let cmd_name = parsed.command();
+    let args = parsed.args();
+
+    // Check aliases before built-in commands
+    let alias_expansion = {
+        let aliases = crate::commands::alias::ALIASES.lock();
+        aliases.get(cmd_name).map(|s| {
+            let mut buf = [0u8; 256];
+            let len = s.len().min(256);
+            buf[..len].copy_from_slice(&s.as_bytes()[..len]);
+            (buf, len)
+        })
+    };
+    if let Some((buf, len)) = alias_expansion {
+        if let Ok(expanded) = core::str::from_utf8(&buf[..len]) {
+            // Append original args to the alias expansion
+            if args.is_empty() {
+                dispatch_line(expanded);
+            } else {
+                let mut full = [0u8; 256];
+                let mut pos = 0;
+                let exp_bytes = expanded.as_bytes();
+                let copy_len = exp_bytes.len().min(256);
+                full[..copy_len].copy_from_slice(&exp_bytes[..copy_len]);
+                pos += copy_len;
+                for arg in args {
+                    if pos < 255 {
+                        full[pos] = b' ';
+                        pos += 1;
+                    }
+                    let ab = arg.as_bytes();
+                    let alen = ab.len().min(255 - pos);
+                    full[pos..pos + alen].copy_from_slice(&ab[..alen]);
+                    pos += alen;
+                }
+                if let Ok(full_str) = core::str::from_utf8(&full[..pos]) {
+                    dispatch_line(full_str);
+                }
             }
+            return;
         }
     }
+
+    match commands::find_command(cmd_name) {
+        Some(command) => (command.handler)(args),
+        None => {
+            minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::RED);
+            println!("Unknown command: {}", cmd_name);
+            minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
+        }
+    }
+}
+
+/// Executes a command and captures its printed output.
+fn capture_command(line: &str) -> Vec<u8> {
+    *minios_hal::vga::PIPE_BUFFER.lock() = Some(Vec::new());
+    dispatch_line(line);
+    minios_hal::vga::PIPE_BUFFER
+        .lock()
+        .take()
+        .unwrap_or_default()
+}
+
+/// Executes a pipe: `left | right`.
+fn execute_pipe(line: &str) {
+    let parts: Vec<&str> = line.splitn(2, " | ").collect();
+    if parts.len() != 2 {
+        println!("Invalid pipe syntax");
+        return;
+    }
+
+    let left = parts[0].trim();
+    let right = parts[1].trim();
+
+    let captured = capture_command(left);
+    let captured_str = core::str::from_utf8(&captured).unwrap_or("");
+
+    // Parse the right-side command
+    let parsed = parser::parse(right);
+    if parsed.is_empty() {
+        return;
+    }
+    let cmd = parsed.command();
+    let args = parsed.args();
+
+    match cmd {
+        "head" => pipe_head(captured_str, args),
+        "grep" => pipe_grep(captured_str, args),
+        "wc" => pipe_wc(captured_str),
+        _ => {
+            // For other commands, print the captured output (pass-through)
+            print!("{}", captured_str);
+        }
+    }
+}
+
+fn pipe_head(stdin: &str, args: &[&str]) {
+    let n = if args.is_empty() {
+        10
+    } else {
+        parse_usize(args[0]).unwrap_or(10)
+    };
+    for (i, line) in stdin.lines().enumerate() {
+        if i >= n {
+            break;
+        }
+        println!("{}", line);
+    }
+}
+
+fn pipe_grep(stdin: &str, args: &[&str]) {
+    if args.is_empty() {
+        println!("grep: missing pattern");
+        return;
+    }
+    let pattern = args[0];
+    for line in stdin.lines() {
+        if line.contains(pattern) {
+            println!("{}", line);
+        }
+    }
+}
+
+fn pipe_wc(stdin: &str) {
+    let lines = stdin.lines().count();
+    let words = stdin.split_whitespace().count();
+    let bytes = stdin.len();
+    println!("  {:>6} {:>6} {:>6}", lines, words, bytes);
+}
+
+fn parse_usize(s: &str) -> Option<usize> {
+    let mut result: usize = 0;
+    for b in s.bytes() {
+        if !b.is_ascii_digit() {
+            return None;
+        }
+        result = result.checked_mul(10)?.checked_add((b - b'0') as usize)?;
+    }
+    Some(result)
 }
