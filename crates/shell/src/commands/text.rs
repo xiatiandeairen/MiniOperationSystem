@@ -118,13 +118,13 @@ fn read_file_content(path: &str) -> Option<alloc::string::String> {
     drop(vfs_guard);
     core::str::from_utf8(&buf[..n])
         .ok()
-        .map(|s| alloc::string::String::from(s))
+        .map(alloc::string::String::from)
 }
 
 fn parse_usize(s: &str) -> Option<usize> {
     let mut result: usize = 0;
     for b in s.bytes() {
-        if b < b'0' || b > b'9' {
+        if !b.is_ascii_digit() {
             return None;
         }
         result = result.checked_mul(10)?.checked_add((b - b'0') as usize)?;
