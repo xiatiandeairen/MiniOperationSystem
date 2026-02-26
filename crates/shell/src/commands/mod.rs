@@ -5,6 +5,7 @@ pub mod basic;
 pub mod compare;
 pub mod crash;
 pub mod env_cmds;
+pub mod errors;
 pub mod explain;
 pub mod fs_cmds;
 pub mod journey;
