@@ -6,4 +6,5 @@ description = "Trace engine with ring buffer storage for MiniOS"
 
 [dependencies]
 minios-common = { path = "../common" }
+minios-hal = { path = "../hal" }
 spin = { workspace = true }

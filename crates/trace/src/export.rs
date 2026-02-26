@@ -6,6 +6,18 @@
 use crate::span::Span;
 use core::fmt::Write;
 
+/// A [`Write`] adapter that sends output directly to the serial port.
+///
+/// Used by Shell `trace export` to dump JSON spans to a host-side capture.
+pub struct SerialJsonWriter;
+
+impl Write for SerialJsonWriter {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        minios_hal::serial::_serial_print(format_args!("{}", s));
+        Ok(())
+    }
+}
+
 /// Writes an array of spans as a JSON array to `writer`.
 ///
 /// The output format follows the project spec: each span is an object with

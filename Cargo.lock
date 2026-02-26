@@ -170,6 +170,7 @@ name = "minios-trace"
 version = "0.1.0"
 dependencies = [
  "minios-common",
+ "minios-hal",
  "spin",
 ]
 

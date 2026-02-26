@@ -9,7 +9,7 @@ use minios_common::id::Pid;
 /// Maximum data payload in a single message.
 pub const MAX_MSG_DATA: usize = 256;
 
-/// A single IPC message.
+/// A single IPC message carrying optional trace context for cross-process linking.
 #[derive(Clone)]
 pub struct Message {
     /// PID of the sending process.
@@ -20,6 +20,11 @@ pub struct Message {
     pub data: [u8; MAX_MSG_DATA],
     /// Number of valid bytes in `data`.
     pub data_len: usize,
+    /// Trace context from the sender, enabling cross-process trace chain linking.
+    /// When present, the receiver can call `tracer.set_context()` to continue
+    /// the same trace chain, making the full send→receive path visible in the
+    /// trace viewer as a single connected trace.
+    pub trace_context: Option<minios_common::types::TraceContext>,
 }
 
 impl Message {
@@ -33,7 +38,20 @@ impl Message {
             msg_type,
             data,
             data_len: len,
+            trace_context: None,
         }
+    }
+
+    /// Creates a message with an attached trace context for cross-process tracing.
+    pub fn with_trace(
+        sender: Pid,
+        msg_type: u32,
+        payload: &[u8],
+        ctx: minios_common::types::TraceContext,
+    ) -> Self {
+        let mut msg = Self::new(sender, msg_type, payload);
+        msg.trace_context = Some(ctx);
+        msg
     }
 }
 
@@ -90,5 +108,61 @@ impl MessageQueue {
     /// Returns `true` if the queue is empty.
     pub fn is_empty(&self) -> bool {
         self.count == 0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use minios_common::error::IpcError;
+
+    #[test]
+    fn send_and_receive() {
+        let mut q = MessageQueue::new(4);
+        let msg = Message::new(Pid(0), 1, b"hello");
+        q.send(msg).unwrap();
+        let recv = q.receive().unwrap();
+        assert_eq!(recv.sender, Pid(0));
+        assert_eq!(recv.msg_type, 1);
+        assert_eq!(&recv.data[..recv.data_len], b"hello");
+    }
+
+    #[test]
+    fn fifo_order() {
+        let mut q = MessageQueue::new(4);
+        q.send(Message::new(Pid(0), 1, b"first")).unwrap();
+        q.send(Message::new(Pid(0), 2, b"second")).unwrap();
+        q.send(Message::new(Pid(0), 3, b"third")).unwrap();
+        let a = q.receive().unwrap();
+        let b = q.receive().unwrap();
+        let c = q.receive().unwrap();
+        assert_eq!(&a.data[..a.data_len], b"first");
+        assert_eq!(&b.data[..b.data_len], b"second");
+        assert_eq!(&c.data[..c.data_len], b"third");
+    }
+
+    #[test]
+    fn full_queue_returns_error() {
+        let mut q = MessageQueue::new(2);
+        q.send(Message::new(Pid(0), 0, b"a")).unwrap();
+        q.send(Message::new(Pid(0), 0, b"b")).unwrap();
+        let r = q.send(Message::new(Pid(0), 0, b"c"));
+        assert!(matches!(r, Err(IpcError::QueueFull)));
+    }
+
+    #[test]
+    fn empty_queue_returns_error() {
+        let mut q = MessageQueue::new(2);
+        let r = q.receive();
+        assert!(matches!(r, Err(IpcError::QueueEmpty)));
+    }
+
+    #[test]
+    fn message_new_truncates() {
+        let payload: [u8; 300] = [42; 300];
+        let msg = Message::new(Pid(1), 0, &payload);
+        assert_eq!(msg.data_len, MAX_MSG_DATA);
+        assert_eq!(msg.data[0], 42);
+        assert_eq!(msg.data[MAX_MSG_DATA - 1], 42);
     }
 }

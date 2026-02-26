@@ -76,7 +76,7 @@ static COMMANDS: &[Command] = &[
     },
     Command {
         name: "trace",
-        description: "Trace subsystem (list|stats|clear)",
+        description: "Trace subsystem (list|stats|clear|export)",
         handler: trace_cmds::cmd_trace,
     },
 ];

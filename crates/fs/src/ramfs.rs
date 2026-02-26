@@ -233,3 +233,97 @@ fn find_child(
     }
     Err(FsError::NotFound)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use minios_common::id::InodeId;
+    use minios_common::types::InodeType;
+
+    const ROOT: InodeId = InodeId(0);
+
+    #[test]
+    fn create_file_in_root() {
+        let fs = RamFs::new();
+        let id = fs.create_file(ROOT, "foo").unwrap();
+        assert!(id.0 > 0);
+        let found = fs.lookup(ROOT, "foo").unwrap();
+        assert_eq!(found, id);
+    }
+
+    #[test]
+    fn create_dir() {
+        let fs = RamFs::new();
+        let id = fs.create_dir(ROOT, "mydir").unwrap();
+        let stat = fs.stat(id).unwrap();
+        assert_eq!(stat.inode_type, InodeType::Directory);
+    }
+
+    #[test]
+    fn write_and_read_data() {
+        let fs = RamFs::new();
+        let id = fs.create_file(ROOT, "f").unwrap();
+        let data = b"hello world";
+        fs.write_data(id, 0, data).unwrap();
+        let mut buf = [0u8; 32];
+        let n = fs.read_data(id, 0, &mut buf).unwrap();
+        assert_eq!(n, 11);
+        assert_eq!(&buf[..11], data);
+    }
+
+    #[test]
+    fn write_extends_data() {
+        let fs = RamFs::new();
+        let id = fs.create_file(ROOT, "f").unwrap();
+        fs.write_data(id, 0, b"ab").unwrap();
+        fs.write_data(id, 5, b"X").unwrap();
+        let mut buf = [0u8; 16];
+        let n = fs.read_data(id, 0, &mut buf).unwrap();
+        assert_eq!(n, 6);
+        assert_eq!(&buf[..6], b"ab\0\0\0X");
+    }
+
+    #[test]
+    fn lookup_not_found() {
+        let fs = RamFs::new();
+        let r = fs.lookup(ROOT, "nonexistent");
+        assert!(matches!(r, Err(FsError::NotFound)));
+    }
+
+    #[test]
+    fn remove_file() {
+        let fs = RamFs::new();
+        fs.create_file(ROOT, "f").unwrap();
+        fs.remove(ROOT, "f").unwrap();
+        let r = fs.lookup(ROOT, "f");
+        assert!(matches!(r, Err(FsError::NotFound)));
+    }
+
+    #[test]
+    fn create_duplicate_fails() {
+        let fs = RamFs::new();
+        fs.create_file(ROOT, "dup").unwrap();
+        let r = fs.create_file(ROOT, "dup");
+        assert!(matches!(r, Err(FsError::AlreadyExists)));
+    }
+
+    #[test]
+    fn list_dir_entries() {
+        let fs = RamFs::new();
+        fs.create_file(ROOT, "a").unwrap();
+        fs.create_file(ROOT, "b").unwrap();
+        fs.create_dir(ROOT, "c").unwrap();
+        let entries = fs.list_dir(ROOT).unwrap();
+        assert_eq!(entries.len(), 3);
+        let mut found = [false, false, false];
+        for (name, _) in &entries {
+            match name.as_str() {
+                "a" => found[0] = true,
+                "b" => found[1] = true,
+                "c" => found[2] = true,
+                _ => {}
+            }
+        }
+        assert!(found[0] && found[1] && found[2]);
+    }
+}
