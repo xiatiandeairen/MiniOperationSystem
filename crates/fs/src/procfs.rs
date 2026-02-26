@@ -25,7 +25,7 @@ pub fn read_procfs(path: &str) -> Result<Vec<u8>, FsError> {
         _ if path.starts_with("/proc/") && path.ends_with("/status") => {
             let pid_str = &path[6..path.len() - 7];
             let pid_num = pid_str.bytes().fold(0u32, |a, b| {
-                if (b'0'..=b'9').contains(&b) {
+                if b.is_ascii_digit() {
                     a * 10 + (b - b'0') as u32
                 } else {
                     a

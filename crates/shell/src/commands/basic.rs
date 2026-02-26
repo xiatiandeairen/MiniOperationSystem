@@ -3,7 +3,7 @@
 extern crate alloc;
 
 use core::sync::atomic::{AtomicU64, Ordering};
-use minios_hal::{println, serial_println};
+use minios_hal::println;
 
 static SNAPSHOT_FRAMES: AtomicU64 = AtomicU64::new(0);
 static SNAPSHOT_HEAP: AtomicU64 = AtomicU64::new(0);
@@ -57,7 +57,7 @@ pub fn cmd_sleep(args: &[&str]) {
         args[0]
             .bytes()
             .fold(0u64, |a, b| {
-                if (b'0'..=b'9').contains(&b) {
+                if b.is_ascii_digit() {
                     a * 10 + (b - b'0') as u64
                 } else {
                     a
