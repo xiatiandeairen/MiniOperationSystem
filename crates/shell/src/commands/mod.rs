@@ -1,6 +1,7 @@
 //! Command registry for the shell.
 
 pub mod basic;
+pub mod explain;
 pub mod fs_cmds;
 pub mod mem_cmds;
 pub mod proc_cmds;
@@ -115,6 +116,16 @@ static COMMANDS: &[Command] = &[
         name: "alloc",
         description: "Allocate heap memory and show result",
         handler: mem_cmds::cmd_alloc,
+    },
+    Command {
+        name: "explain",
+        description: "Explain how a command works inside the OS",
+        handler: explain::cmd_explain,
+    },
+    Command {
+        name: "tutorial",
+        description: "Interactive guide for first-time users",
+        handler: explain::cmd_tutorial,
     },
 ];
 
