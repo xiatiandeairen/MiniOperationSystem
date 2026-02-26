@@ -11,7 +11,7 @@ use minios_common::traits::fs::FileSystem;
 use minios_common::traits::memory::{FrameAllocator, HeapAllocator};
 use minios_common::traits::trace::Tracer;
 use minios_common::types::{OpenFlags, Priority, ProcessState, ScheduleDecision};
-use minios_trace::{trace_event, trace_span};
+use minios_trace::trace_span;
 
 /// Map the complete physical memory so we can access VGA buffer at 0xB8000.
 /// Stack is increased from the default 80 KiB to 512 KiB to accommodate
