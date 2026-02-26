@@ -1,5 +1,7 @@
 //! Basic shell commands: help, echo, clear, uptime, meminfo.
 
+extern crate alloc;
+
 use minios_hal::{println, serial_println};
 
 /// Lists all available commands with descriptions.
@@ -176,6 +178,55 @@ pub fn cmd_debug(args: &[&str]) {
         }
         _ => println!("Usage: debug <on|off|status>"),
     }
+}
+
+/// Runs a command once for each item in a list.
+pub fn cmd_each(args: &[&str]) {
+    if args.len() < 2 {
+        println!("Usage: each <command> <args...>");
+        return;
+    }
+    let cmd = args[0];
+    for item in &args[1..] {
+        println!("> {} {}", cmd, item);
+        let line = alloc::format!("{} {}", cmd, item);
+        let parsed = crate::parser::parse(&line);
+        if !parsed.is_empty() {
+            if let Some(command) = crate::commands::find_command(parsed.command()) {
+                (command.handler)(parsed.args());
+            }
+        }
+    }
+}
+
+/// Repeats a command N times.
+pub fn cmd_repeat(args: &[&str]) {
+    if args.len() < 2 {
+        println!("Usage: repeat <N> <command> [args...]");
+        return;
+    }
+    let n = parse_usize_basic(args[0]).unwrap_or(1).min(100);
+    let cmd_line: alloc::string::String = args[1..].join(" ");
+    for i in 0..n {
+        println!("--- iteration {} ---", i + 1);
+        let parsed = crate::parser::parse(&cmd_line);
+        if !parsed.is_empty() {
+            if let Some(command) = crate::commands::find_command(parsed.command()) {
+                (command.handler)(parsed.args());
+            }
+        }
+    }
+}
+
+fn parse_usize_basic(s: &str) -> Option<usize> {
+    let mut r: usize = 0;
+    for b in s.bytes() {
+        if !(b'0'..=b'9').contains(&b) {
+            return None;
+        }
+        r = r.checked_mul(10)?.checked_add((b - b'0') as usize)?;
+    }
+    Some(r)
 }
 
 /// Reads a file and executes each line as a shell command.
