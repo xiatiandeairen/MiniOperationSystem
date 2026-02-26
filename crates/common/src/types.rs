@@ -11,21 +11,37 @@ use core::fmt;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Color {
+    /// Black (0).
     Black = 0,
+    /// Blue (1).
     Blue = 1,
+    /// Green (2).
     Green = 2,
+    /// Cyan (3).
     Cyan = 3,
+    /// Red (4).
     Red = 4,
+    /// Magenta (5).
     Magenta = 5,
+    /// Brown (6).
     Brown = 6,
+    /// Light gray (7).
     LightGray = 7,
+    /// Dark gray (8).
     DarkGray = 8,
+    /// Light blue (9).
     LightBlue = 9,
+    /// Light green (10).
     LightGreen = 10,
+    /// Light cyan (11).
     LightCyan = 11,
+    /// Light red (12).
     LightRed = 12,
+    /// Pink (13).
     Pink = 13,
+    /// Yellow (14).
     Yellow = 14,
+    /// White (15).
     White = 15,
 }
 
@@ -35,6 +51,7 @@ pub enum Color {
 pub struct ColorCode(u8);
 
 impl ColorCode {
+    /// Packs a foreground and background color into a single byte.
     pub const fn new(foreground: Color, background: Color) -> Self {
         Self((background as u8) << 4 | (foreground as u8))
     }
@@ -47,10 +64,15 @@ impl ColorCode {
 /// Lifecycle state of a process.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProcessState {
+    /// Newly created, not yet scheduled.
     Created,
+    /// Waiting in the run queue.
     Ready,
+    /// Currently executing on the CPU.
     Running,
+    /// Waiting for an event (I/O, IPC, sleep).
     Blocked,
+    /// Exited or killed.
     Terminated,
 }
 
@@ -71,27 +93,39 @@ impl fmt::Display for ProcessState {
 pub struct Priority(pub u8);
 
 impl Priority {
+    /// Highest priority (0).
     pub const HIGH: Self = Self(0);
+    /// Medium priority (1).
     pub const MEDIUM: Self = Self(1);
+    /// Low priority (2).
     pub const LOW: Self = Self(2);
+    /// Idle priority (3) — only runs when nothing else is ready.
     pub const IDLE: Self = Self(3);
 }
 
 /// Summary information about a process, suitable for `ps` output.
 #[derive(Debug, Clone)]
 pub struct ProcessInfo {
+    /// Process identifier.
     pub pid: Pid,
+    /// Current lifecycle state.
     pub state: ProcessState,
+    /// Scheduling priority.
     pub priority: Priority,
+    /// Accumulated CPU ticks consumed.
     pub cpu_time_ticks: u64,
 }
 
 /// Reason a process was blocked.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlockReason {
+    /// Waiting for I/O completion.
     Io,
+    /// Waiting for an IPC message.
     IpcReceive,
+    /// Sleeping for a specified duration.
     Sleep,
+    /// Waiting for a child process to exit.
     WaitChild,
 }
 
@@ -113,9 +147,13 @@ pub enum ScheduleDecision {
 /// Runtime statistics from the scheduler.
 #[derive(Debug, Clone)]
 pub struct SchedulerStats {
+    /// Number of context switches performed.
     pub total_switches: u64,
+    /// Total timer ticks processed.
     pub total_ticks: u64,
+    /// Number of tasks in each priority queue.
     pub queue_lengths: [usize; 4],
+    /// Ticks spent in idle (no runnable task).
     pub idle_ticks: u64,
 }
 
@@ -127,9 +165,13 @@ bitflags::bitflags! {
     /// Flags passed to `open()`.
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct OpenFlags: u32 {
+        /// Open for reading.
         const READ   = 0b0001;
+        /// Open for writing.
         const WRITE  = 0b0010;
+        /// Create the file if it does not exist.
         const CREATE = 0b0100;
+        /// Append to the end of the file.
         const APPEND = 0b1000;
     }
 }
@@ -137,34 +179,48 @@ bitflags::bitflags! {
 /// Origin for `seek()`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SeekWhence {
+    /// Offset from the beginning of the file.
     Start,
+    /// Offset from the current position.
     Current,
+    /// Offset from the end of the file.
     End,
 }
 
 /// Type of an inode (file, directory, device, …).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InodeType {
+    /// Regular file.
     File,
+    /// Directory.
     Directory,
+    /// Character device.
     CharDevice,
+    /// Special (e.g. proc, pipe).
     Special,
 }
 
 /// A single directory entry returned by `readdir()`.
 #[derive(Debug, Clone)]
 pub struct DirEntry {
+    /// File name bytes (up to 255).
     pub name: [u8; 255],
+    /// Actual length of the name.
     pub name_len: usize,
+    /// Type of the inode.
     pub inode_type: InodeType,
 }
 
 /// Metadata about a file or directory.
 #[derive(Debug, Clone)]
 pub struct FileStat {
+    /// Size in bytes.
     pub size: usize,
+    /// Type of the inode.
     pub inode_type: InodeType,
+    /// Creation timestamp (ticks).
     pub created_at: u64,
+    /// Last modification timestamp (ticks).
     pub modified_at: u64,
 }
 
@@ -175,7 +231,9 @@ pub struct FileStat {
 /// Broad device classification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeviceType {
+    /// Character-oriented device (serial, keyboard).
     CharDevice,
+    /// Block-oriented device (disk).
     BlockDevice,
 }
 
@@ -186,42 +244,59 @@ pub enum DeviceType {
 /// Trace context propagated through the call chain.
 #[derive(Clone, Copy, Debug)]
 pub struct TraceContext {
+    /// Root trace identifier.
     pub trace_id: TraceId,
+    /// Currently active span.
     pub current_span_id: SpanId,
+    /// Nesting depth of the current span.
     pub depth: u16,
 }
 
 /// Value stored inside a span attribute.
 #[derive(Clone, Copy, Debug)]
 pub enum AttributeValue {
+    /// Unsigned 64-bit integer.
     U64(u64),
+    /// Signed 64-bit integer.
     I64(i64),
+    /// Boolean.
     Bool(bool),
 }
 
 /// Completion status of a trace span.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SpanStatus {
+    /// Span completed successfully.
     Ok,
+    /// Span ended with an error.
     Error,
+    /// Span is still open.
     InProgress,
 }
 
 /// Runtime statistics of the trace engine.
 #[derive(Debug, Clone)]
 pub struct TraceStats {
+    /// Total spans ever written to the buffer.
     pub total_spans_written: u64,
+    /// Maximum number of spans the buffer can hold.
     pub buffer_capacity: usize,
+    /// Spans currently stored in the buffer.
     pub buffer_used: usize,
+    /// Spans that are still open (in-progress).
     pub active_spans: usize,
 }
 
 /// Filter criteria for reading spans from the trace buffer.
 #[derive(Debug, Clone, Default)]
 pub struct SpanFilter {
+    /// Filter by module name.
     pub module: Option<[u8; 32]>,
+    /// Filter by trace ID.
     pub trace_id: Option<TraceId>,
+    /// Filter by owning process.
     pub pid: Option<Pid>,
+    /// Filter by span completion status.
     pub status: Option<SpanStatus>,
 }
 

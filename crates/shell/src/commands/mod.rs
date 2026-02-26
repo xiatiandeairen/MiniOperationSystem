@@ -161,6 +161,21 @@ static COMMANDS: &[Command] = &[
         handler: basic::cmd_run,
     },
     Command {
+        name: "each",
+        description: "Run a command for each item in a list",
+        handler: basic::cmd_each,
+    },
+    Command {
+        name: "repeat",
+        description: "Repeat a command N times",
+        handler: basic::cmd_repeat,
+    },
+    Command {
+        name: "syllabus",
+        description: "Show structured OS course outline",
+        handler: basic::cmd_syllabus,
+    },
+    Command {
         name: "history",
         description: "Show command history",
         handler: basic::cmd_history,

@@ -1,5 +1,7 @@
 //! Basic shell commands: help, echo, clear, uptime, meminfo.
 
+extern crate alloc;
+
 use minios_hal::{println, serial_println};
 
 /// Lists all available commands with descriptions.
@@ -178,6 +180,55 @@ pub fn cmd_debug(args: &[&str]) {
     }
 }
 
+/// Runs a command once for each item in a list.
+pub fn cmd_each(args: &[&str]) {
+    if args.len() < 2 {
+        println!("Usage: each <command> <args...>");
+        return;
+    }
+    let cmd = args[0];
+    for item in &args[1..] {
+        println!("> {} {}", cmd, item);
+        let line = alloc::format!("{} {}", cmd, item);
+        let parsed = crate::parser::parse(&line);
+        if !parsed.is_empty() {
+            if let Some(command) = crate::commands::find_command(parsed.command()) {
+                (command.handler)(parsed.args());
+            }
+        }
+    }
+}
+
+/// Repeats a command N times.
+pub fn cmd_repeat(args: &[&str]) {
+    if args.len() < 2 {
+        println!("Usage: repeat <N> <command> [args...]");
+        return;
+    }
+    let n = parse_usize_basic(args[0]).unwrap_or(1).min(100);
+    let cmd_line: alloc::string::String = args[1..].join(" ");
+    for i in 0..n {
+        println!("--- iteration {} ---", i + 1);
+        let parsed = crate::parser::parse(&cmd_line);
+        if !parsed.is_empty() {
+            if let Some(command) = crate::commands::find_command(parsed.command()) {
+                (command.handler)(parsed.args());
+            }
+        }
+    }
+}
+
+fn parse_usize_basic(s: &str) -> Option<usize> {
+    let mut r: usize = 0;
+    for b in s.bytes() {
+        if !b.is_ascii_digit() {
+            return None;
+        }
+        r = r.checked_mul(10)?.checked_add((b - b'0') as usize)?;
+    }
+    Some(r)
+}
+
 /// Reads a file and executes each line as a shell command.
 pub fn cmd_run(args: &[&str]) {
     if args.is_empty() {
@@ -243,4 +294,40 @@ pub fn cmd_run(args: &[&str]) {
         }
     }
     super::journey::mark(super::journey::STEP_RUN);
+}
+
+/// Prints a structured course outline for using MiniOS as a teaching tool.
+pub fn cmd_syllabus(_args: &[&str]) {
+    println!("=== MiniOS Operating Systems Syllabus ===");
+    println!();
+    println!("Module 1: Process Management (2 hours)");
+    println!("  Concepts: PCB, state machine, scheduling algorithms");
+    println!("  Commands: ps, spawn, kill, signal, sched, compare scheduler");
+    println!("  Lab: lab scheduler-fairness");
+    println!("  Reading: explain ps, explain spawn, explain sched");
+    println!();
+    println!("Module 2: Memory Management (2 hours)");
+    println!("  Concepts: Physical frames, virtual pages, heap allocation");
+    println!("  Commands: meminfo, frames, pagetable, alloc");
+    println!("  Lab: lab memory-usage, lab page-table-walk");
+    println!("  Reading: explain meminfo, explain frames, explain pagetable");
+    println!();
+    println!("Module 3: File Systems (1.5 hours)");
+    println!("  Concepts: VFS, inodes, file descriptors, directory tree");
+    println!("  Commands: ls, cat, mkdir, write, touch, rm");
+    println!("  Lab: lab fs-operations");
+    println!("  Reading: explain ls, explain cat, compare filesystem");
+    println!();
+    println!("Module 4: System Calls & IPC (1.5 hours)");
+    println!("  Concepts: Syscall interface, message passing, tracing");
+    println!("  Commands: trace follow, trace tree, log, compare syscall/ipc");
+    println!("  Lab: lab trace-overhead");
+    println!("  Reading: explain trace, compare syscall, compare ipc");
+    println!();
+    println!("Module 5: Fault Handling (1 hour)");
+    println!("  Concepts: Interrupts, exceptions, OOM, stack overflow");
+    println!("  Commands: crash oom, crash stack, crash divide-zero, interrupts");
+    println!("  Reading: explain log");
+    println!();
+    println!("Total: ~8 hours of guided hands-on learning");
 }

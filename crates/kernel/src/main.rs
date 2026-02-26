@@ -3,12 +3,10 @@
 
 extern crate alloc;
 
-use alloc::vec;
 use bootloader_api::{config::Mapping, entry_point, BootInfo, BootloaderConfig};
 use core::panic::PanicInfo;
 use minios_common::id::Pid;
 use minios_common::traits::fs::FileSystem;
-use minios_common::traits::memory::{FrameAllocator, HeapAllocator};
 use minios_common::traits::trace::Tracer;
 use minios_common::types::{OpenFlags, Priority, ProcessState, ScheduleDecision};
 use minios_trace::trace_span;
@@ -31,7 +29,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     minios_hal::interrupts::init_idt();
     minios_hal::serial::init();
 
-    minios_hal::serial_println!("MiniOS: boot sequence started");
+    boot_progress("HAL initialized (GDT, IDT, serial)");
 
     // Extract framebuffer info before memory init borrows boot_info.
     // We take the raw pointer to the framebuffer buffer and reconstruct
@@ -53,14 +51,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
                 info.stride,
             );
         }
-        minios_hal::serial_println!(
-            "Framebuffer: {}x{} px, {}x{} chars",
-            info.width,
-            info.height,
-            info.width / 8,
-            info.height / 16,
-        );
     }
+
+    boot_progress("Framebuffer initialized");
 
     let _boot_span = trace_span!("kernel_boot", module = "boot");
 
@@ -73,24 +66,14 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
     minios_hal::println!();
 
+    boot_progress("Banner displayed");
+
     let mem = {
         let _mem_span = trace_span!("memory_init", module = "memory");
-        let m = minios_memory::init(boot_info).expect("memory init failed");
-        minios_hal::serial_println!(
-            "Memory: total frames = {}, free frames = {}",
-            m.frame_allocator.total_frame_count(),
-            m.frame_allocator.free_frame_count()
-        );
-        minios_hal::serial_println!(
-            "Heap: used = {} bytes, free = {} bytes",
-            m.heap.used_bytes(),
-            m.heap.free_bytes()
-        );
-        m
+        minios_memory::init(boot_info).expect("memory init failed")
     };
 
-    let v = vec![1, 2, 3];
-    minios_hal::serial_println!("heap works: {:?}", v);
+    boot_progress("Memory subsystem initialized");
 
     mem.publish_stats();
 
@@ -99,36 +82,33 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         init_filesystem();
     }
 
-    // Boot-time smoke tests (uncomment for debugging):
-    // {
-    //     let _syscall_span = trace_span!("syscall_test", module = "syscall");
-    //     test_syscalls();
-    // }
-    // {
-    //     let _ipc_span = trace_span!("ipc_test", module = "ipc");
-    //     test_ipc();
-    // }
+    boot_progress("Filesystem initialized");
 
     {
         let _proc_span = trace_span!("process_init", module = "process");
         init_processes();
     }
 
+    boot_progress("Process manager initialized");
+
     minios_hal::println!("Boot successful. System ready.");
-    minios_hal::serial_println!("MiniOS: VGA output written");
 
     minios_hal::interrupts::set_timer_callback(on_timer_tick);
     minios_hal::enable_interrupts();
-    minios_hal::serial_println!("MiniOS: interrupts enabled, scheduler active");
+
+    boot_progress("Interrupts enabled, scheduler active");
 
     minios_shell::run_shell();
+}
+
+fn boot_progress(step: &str) {
+    minios_hal::println!("[BOOT] {}", step);
 }
 
 /// Initialises the VFS, creates default directories, and runs a smoke test.
 /// Stores the VFS in the global static for shell access.
 fn init_filesystem() {
     let vfs = minios_fs::init();
-    minios_hal::serial_println!("Filesystem initialized");
 
     let fd = vfs
         .open("/tmp/test.txt", OpenFlags::CREATE | OpenFlags::WRITE)
@@ -141,13 +121,8 @@ fn init_filesystem() {
         .open("/tmp/test.txt", OpenFlags::READ)
         .expect("fs: open-read failed");
     let mut buf = [0u8; 64];
-    let n = vfs.read(fd, &mut buf).expect("fs: read failed");
+    let _n = vfs.read(fd, &mut buf).expect("fs: read failed");
     vfs.close(fd).expect("fs: close failed");
-
-    minios_hal::serial_println!(
-        "fs read: {}",
-        core::str::from_utf8(&buf[..n]).unwrap_or("<invalid utf8>")
-    );
 
     minios_fs::set_global_vfs(vfs);
 }
@@ -160,11 +135,9 @@ fn init_processes() {
 
     let idle_pid = manager::create_kernel_task("idle", idle_task, Priority::IDLE)
         .expect("failed to create idle task");
-    minios_hal::serial_println!("Created idle task: PID {}", idle_pid);
 
     let init_pid = manager::create_kernel_task("init", init_task, Priority::HIGH)
         .expect("failed to create init task");
-    minios_hal::serial_println!("Created init task: PID {}", init_pid);
 
     {
         let mut sched = SCHEDULER.lock();
@@ -173,25 +146,6 @@ fn init_processes() {
     }
 
     manager::set_current(idle_pid);
-
-    print_process_list();
-    minios_hal::serial_println!("Process manager initialized");
-}
-
-/// Prints the current process table to serial output.
-fn print_process_list() {
-    let procs = minios_process::manager::list_processes();
-    minios_hal::serial_println!("--- Process List ({} tasks) ---", procs.len());
-    for p in &procs {
-        minios_hal::serial_println!(
-            "  PID {} | {:?} | priority {} | cpu_time {}",
-            p.pid,
-            p.state,
-            p.priority.0,
-            p.cpu_time_ticks,
-        );
-    }
-    minios_hal::serial_println!("--- End Process List ---");
 }
 
 /// Timer tick callback — drives the scheduler.
@@ -266,7 +220,6 @@ fn idle_task() {
 
 /// Init task — runs the shell after printing a startup message.
 fn init_task() {
-    minios_hal::serial_println!("init process (PID 1) running");
     loop {
         minios_hal::cpu::hlt();
     }

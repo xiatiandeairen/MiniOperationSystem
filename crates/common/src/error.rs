@@ -5,22 +5,34 @@ use core::fmt;
 /// Unified kernel error covering all subsystem failures.
 #[derive(Debug)]
 pub enum KernelError {
+    /// Memory subsystem error.
     Memory(MemoryError),
+    /// Process subsystem error.
     Process(ProcessError),
+    /// Filesystem subsystem error.
     FileSystem(FsError),
+    /// IPC subsystem error.
     Ipc(IpcError),
+    /// Device driver error.
     Driver(DriverError),
+    /// Trace subsystem error.
     Trace(TraceError),
 }
 
 // --- Memory -----------------------------------------------------------------
 
+/// Memory subsystem errors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MemoryError {
+    /// No physical frames available.
     OutOfMemory,
+    /// Address is outside valid range.
     InvalidAddress,
+    /// Virtual page is already mapped.
     AlreadyMapped,
+    /// Virtual page is not mapped.
     NotMapped,
+    /// Address does not meet alignment requirements.
     AlignmentError,
 }
 
@@ -44,12 +56,18 @@ impl From<MemoryError> for KernelError {
 
 // --- Process ----------------------------------------------------------------
 
+/// Process management errors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProcessError {
+    /// Process table is full.
     MaxProcessesReached,
+    /// PID is out of range or unallocated.
     InvalidPid,
+    /// No process with the given PID exists.
     ProcessNotFound,
+    /// Transition between the two states is not allowed.
     InvalidStateTransition,
+    /// Could not allocate a kernel stack for the process.
     StackAllocationFailed,
 }
 
@@ -73,16 +91,26 @@ impl From<ProcessError> for KernelError {
 
 // --- FileSystem -------------------------------------------------------------
 
+/// Filesystem errors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FsError {
+    /// Path does not resolve to any inode.
     NotFound,
+    /// An entry with that name already exists.
     AlreadyExists,
+    /// Expected a directory but found a file.
     NotADirectory,
+    /// Expected a file but found a directory.
     NotAFile,
+    /// Operation not permitted.
     PermissionDenied,
+    /// Filesystem has no free space.
     NoSpace,
+    /// Path string is malformed.
     InvalidPath,
+    /// File descriptor table is full.
     TooManyOpenFiles,
+    /// File descriptor is not open or out of range.
     InvalidDescriptor,
 }
 
@@ -110,12 +138,18 @@ impl From<FsError> for KernelError {
 
 // --- IPC --------------------------------------------------------------------
 
+/// Inter-process communication errors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IpcError {
+    /// Message queue has reached capacity.
     QueueFull,
+    /// No messages available in the queue.
     QueueEmpty,
+    /// Queue ID does not match any existing queue.
     QueueNotFound,
+    /// Operation timed out waiting for a message.
     Timeout,
+    /// Message payload is invalid or too large.
     InvalidMessage,
 }
 
@@ -139,11 +173,16 @@ impl From<IpcError> for KernelError {
 
 // --- Driver -----------------------------------------------------------------
 
+/// Device driver errors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DriverError {
+    /// Driver has not been initialized yet.
     NotInitialized,
+    /// No device matches the requested identifier.
     DeviceNotFound,
+    /// Hardware I/O operation failed.
     IoError,
+    /// Operation is not supported by this driver.
     Unsupported,
 }
 
@@ -166,10 +205,14 @@ impl From<DriverError> for KernelError {
 
 // --- Trace ------------------------------------------------------------------
 
+/// Trace engine errors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TraceError {
+    /// Ring buffer has no free slots.
     BufferFull,
+    /// Span nesting depth limit reached.
     MaxDepthExceeded,
+    /// Trace engine has not been initialized.
     NotInitialized,
 }
 
