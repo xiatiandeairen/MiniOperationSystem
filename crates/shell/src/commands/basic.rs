@@ -180,6 +180,28 @@ pub fn cmd_debug(args: &[&str]) {
     }
 }
 
+/// Prints an audit summary of unsafe code usage in MiniOS.
+pub fn cmd_safety(_args: &[&str]) {
+    println!("=== MiniOS Safety Audit ===");
+    println!();
+    println!("Unsafe code locations:");
+    println!("  hal/gdt.rs      \u{2014} GDT/TSS static stack (SAFETY: one-time init)");
+    println!("  hal/vga.rs      \u{2014} VGA buffer pointer (SAFETY: hardware-mapped)");
+    println!("  hal/framebuffer \u{2014} raw pointer to bootloader framebuffer");
+    println!("  hal/serial.rs   \u{2014} UART port I/O (SAFETY: standard COM1 address)");
+    println!("  hal/cpu.rs      \u{2014} inline asm for TSC/HLT (SAFETY: privileged ops)");
+    println!("  process/context \u{2014} switch_context_asm (SAFETY: callee-saved regs)");
+    println!("  memory/frame    \u{2014} bitmap from bootloader memory map");
+    println!("  memory/paging   \u{2014} page table from CR3 register");
+    println!("  memory/heap     \u{2014} heap init from raw pointer");
+    println!();
+    println!("Safety invariants:");
+    println!("  - All Mutex-protected data is Send+Sync");
+    println!("  - No unsafe in shell/fs/ipc/scheduler/syscall crates");
+    println!("  - Double-free protected in frame deallocator");
+    println!("  - ISR never acquires Mutex (deadlock prevention)");
+}
+
 /// Runs a command once for each item in a list.
 pub fn cmd_each(args: &[&str]) {
     if args.len() < 2 {

@@ -257,6 +257,11 @@ static COMMANDS: &[Command] = &[
         description: "Show process hierarchy tree",
         handler: proc_cmds::cmd_pstree,
     },
+    Command {
+        name: "safety",
+        description: "Show unsafe code audit summary",
+        handler: basic::cmd_safety,
+    },
 ];
 
 /// Finds a command by name.
