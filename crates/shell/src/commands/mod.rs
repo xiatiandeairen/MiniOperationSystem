@@ -11,6 +11,7 @@ pub mod explain;
 pub mod fs_cmds;
 pub mod journey;
 pub mod lab;
+pub mod man;
 pub mod mem_cmds;
 pub mod proc_cmds;
 pub mod sched_cmds;
@@ -266,6 +267,11 @@ static COMMANDS: &[Command] = &[
         name: "report",
         description: "Export structured learning progress report",
         handler: journey::cmd_report,
+    },
+    Command {
+        name: "man",
+        description: "Quick usage reference for a command",
+        handler: man::cmd_man,
     },
 ];
 
