@@ -9,6 +9,7 @@ pub mod lab;
 pub mod mem_cmds;
 pub mod proc_cmds;
 pub mod sched_cmds;
+pub mod text;
 pub mod trace_cmds;
 pub mod tutorial;
 
@@ -165,6 +166,21 @@ static COMMANDS: &[Command] = &[
         name: "env",
         description: "List all environment variables",
         handler: env_cmds::cmd_env,
+    },
+    Command {
+        name: "head",
+        description: "Show first N lines of a file",
+        handler: text::cmd_head,
+    },
+    Command {
+        name: "grep",
+        description: "Search for a pattern in a file",
+        handler: text::cmd_grep,
+    },
+    Command {
+        name: "wc",
+        description: "Count lines, words, bytes in a file",
+        handler: text::cmd_wc,
     },
 ];
 
