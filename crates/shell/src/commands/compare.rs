@@ -14,8 +14,12 @@ pub fn cmd_compare(args: &[&str]) {
         "filesystem" | "fs" => compare_filesystem(),
         "ipc" => compare_ipc(),
         "syscall" => compare_syscall(),
-        _ => println!("Unknown topic. Try: scheduler, memory, filesystem, ipc, syscall"),
+        _ => {
+            println!("Unknown topic. Try: scheduler, memory, filesystem, ipc, syscall");
+            return;
+        }
     }
+    super::journey::mark(super::journey::STEP_COMPARE);
 }
 
 fn compare_scheduler() {

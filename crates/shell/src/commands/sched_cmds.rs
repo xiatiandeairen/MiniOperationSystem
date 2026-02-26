@@ -33,6 +33,7 @@ pub fn cmd_spawn(args: &[&str]) {
                 .lock()
                 .add_task(pid, Priority::MEDIUM);
             println!("Spawned '{}' with PID {}", name, pid);
+            super::journey::mark(super::journey::STEP_SPAWN);
         }
         Err(e) => println!("spawn: {}", e),
     }

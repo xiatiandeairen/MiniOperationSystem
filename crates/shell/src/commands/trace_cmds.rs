@@ -40,10 +40,16 @@ pub fn cmd_trace(args: &[&str]) {
     match sub {
         "list" => trace_list(),
         "tree" => trace_tree(),
-        "stats" => trace_stats(),
+        "stats" => {
+            trace_stats();
+            super::journey::mark(super::journey::STEP_TRACE_STATS);
+        }
         "clear" => trace_clear(),
         "export" => trace_export(),
-        "follow" => trace_follow(&args[1..]),
+        "follow" => {
+            trace_follow(&args[1..]);
+            super::journey::mark(super::journey::STEP_TRACE_FOLLOW);
+        }
         _ => println!("Usage: trace <list|tree|stats|clear|export|follow>"),
     }
 }

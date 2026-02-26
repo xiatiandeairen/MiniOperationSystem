@@ -15,4 +15,5 @@ pub fn cmd_ps(_args: &[&str]) {
             p.pid, p.state, p.priority.0, p.cpu_time_ticks
         );
     }
+    super::journey::mark(super::journey::STEP_PS);
 }

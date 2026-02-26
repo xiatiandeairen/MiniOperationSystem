@@ -29,6 +29,7 @@ pub fn cmd_pagetable(args: &[&str]) {
     println!("  PT index:   {} ({:#x})", pt_idx, pt_idx);
     println!("  Offset:     {} ({:#x})", offset, offset);
     println!("(Use serial debug for actual translation)");
+    super::journey::mark(super::journey::STEP_PAGETABLE);
 }
 
 /// Displays physical frame usage with a visual bar.
@@ -54,6 +55,7 @@ pub fn cmd_frames(_args: &[&str]) {
         stats.total_frames,
         stats.free_frames * 4,
     );
+    super::journey::mark(super::journey::STEP_FRAMES);
 }
 
 /// Allocates a block of heap memory and reports the result.
