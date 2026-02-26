@@ -236,6 +236,11 @@ static COMMANDS: &[Command] = &[
         description: "Show learning completion report",
         handler: journey::cmd_graduation,
     },
+    Command {
+        name: "top",
+        description: "Show system-wide status snapshot (processes, memory, IRQs)",
+        handler: proc_cmds::cmd_top,
+    },
 ];
 
 /// Finds a command by name.
