@@ -60,6 +60,11 @@ impl FramebufferConsole {
         console
     }
 
+    /// Sets the foreground text color (BGR byte order).
+    pub fn set_fg_color(&mut self, bgr: [u8; 3]) {
+        self.fg = bgr;
+    }
+
     /// Fills the entire screen with the background colour.
     pub fn clear(&mut self) {
         for y in 0..self.height {
@@ -169,6 +174,29 @@ pub unsafe fn init(
     let console =
         unsafe { FramebufferConsole::new(buffer, width, height, bytes_per_pixel, stride) };
     *CONSOLE.lock() = Some(console);
+}
+
+/// Sets the framebuffer text color. Colors are in BGR byte order.
+pub fn set_color(bgr: [u8; 3]) {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        if let Some(ref mut console) = *CONSOLE.lock() {
+            console.set_fg_color(bgr);
+        }
+    });
+}
+
+/// Predefined colors (BGR order for the framebuffer's Bgr pixel format).
+pub mod colors {
+    /// Light blue — default text color.
+    pub const DEFAULT: [u8; 3] = [0xFF, 0xDD, 0xCC];
+    /// Green — success messages and prompt.
+    pub const GREEN: [u8; 3] = [0x66, 0xE6, 0xA6];
+    /// Red — error messages.
+    pub const RED: [u8; 3] = [0x66, 0x66, 0xF3];
+    /// Yellow — warnings.
+    pub const YELLOW: [u8; 3] = [0x66, 0xE0, 0xF9];
+    /// White — bright text.
+    pub const WHITE: [u8; 3] = [0xF4, 0xDD, 0xCD];
 }
 
 /// Writes formatted text to the framebuffer console.

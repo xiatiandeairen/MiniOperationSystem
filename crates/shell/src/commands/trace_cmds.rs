@@ -1,4 +1,6 @@
-//! Trace shell commands: trace list, trace stats, trace clear.
+//! Trace shell commands: trace list, tree, stats, clear, export.
+
+extern crate alloc;
 
 use minios_common::traits::trace::Tracer;
 use minios_hal::println;
@@ -9,10 +11,11 @@ pub fn cmd_trace(args: &[&str]) {
 
     match sub {
         "list" => trace_list(),
+        "tree" => trace_tree(),
         "stats" => trace_stats(),
         "clear" => trace_clear(),
         "export" => trace_export(),
-        _ => println!("Usage: trace <list|stats|clear|export>"),
+        _ => println!("Usage: trace <list|tree|stats|clear|export>"),
     }
 }
 
@@ -39,6 +42,33 @@ fn trace_list() {
             span.span_id,
             span.name_str(),
             span.module_str(),
+            status,
+        );
+    }
+}
+
+/// Shows recent spans as an indented tree based on depth.
+fn trace_tree() {
+    let mut buf: [minios_trace::Span; 20] = core::array::from_fn(|_| minios_trace::Span::default());
+    let n = minios_trace::TRACER.read_recent(20, &mut buf);
+    if n == 0 {
+        println!("No trace spans recorded.");
+        return;
+    }
+    for span in &buf[..n] {
+        let indent = "  ".repeat(span.depth as usize);
+        let duration = span.end_tsc.saturating_sub(span.start_tsc);
+        let status = match span.status {
+            minios_common::types::SpanStatus::Ok => "OK",
+            minios_common::types::SpanStatus::Error => "ERR",
+            minios_common::types::SpanStatus::InProgress => "...",
+        };
+        println!(
+            "{}[{}] {} ({} cycles) {}",
+            indent,
+            span.module_str(),
+            span.name_str(),
+            duration,
             status,
         );
     }
