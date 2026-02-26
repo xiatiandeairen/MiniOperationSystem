@@ -366,4 +366,30 @@ mod tests {
         let stats = sched.stats();
         assert_eq!(stats.queue_lengths[3], 1);
     }
+
+    #[test]
+    fn tick_count_precision() {
+        let mut sched = MlfqScheduler::new();
+        for _ in 0..50 {
+            sched.tick();
+        }
+        assert_eq!(sched.stats().total_ticks, 50);
+    }
+
+    #[test]
+    fn idle_ticks_increment_when_empty() {
+        let mut sched = MlfqScheduler::new();
+        for _ in 0..10 {
+            sched.tick();
+        }
+        assert_eq!(sched.stats().idle_ticks, 10);
+    }
+
+    #[test]
+    fn set_running_clamps_queue() {
+        let mut sched = MlfqScheduler::new();
+        sched.add_task(Pid(1), Priority::HIGH);
+        sched.set_running(Pid(1), 999);
+        assert_eq!(sched.current_pid(), Some(Pid(1)));
+    }
 }

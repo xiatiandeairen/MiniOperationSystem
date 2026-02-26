@@ -223,4 +223,40 @@ mod tests {
         let tc = msg.trace_context.unwrap();
         assert_eq!(tc.trace_id, TraceId(42));
     }
+
+    #[test]
+    fn empty_payload_message() {
+        let msg = Message::new(Pid(0), 0, b"");
+        assert_eq!(msg.data_len, 0);
+    }
+
+    #[test]
+    fn single_byte_payload() {
+        let msg = Message::new(Pid(1), 5, &[0xFF]);
+        assert_eq!(msg.data_len, 1);
+        assert_eq!(msg.data[0], 0xFF);
+    }
+
+    #[test]
+    fn circular_wrap_around() {
+        let mut q = MessageQueue::new(3);
+        q.send(Message::new(Pid(0), 0, b"a")).unwrap();
+        q.send(Message::new(Pid(0), 0, b"b")).unwrap();
+        q.receive().unwrap();
+        q.receive().unwrap();
+        q.send(Message::new(Pid(0), 0, b"c")).unwrap();
+        q.send(Message::new(Pid(0), 0, b"d")).unwrap();
+        q.send(Message::new(Pid(0), 0, b"e")).unwrap();
+        assert_eq!(q.len(), 3);
+        let m = q.receive().unwrap();
+        assert_eq!(&m.data[..m.data_len], b"c");
+    }
+
+    #[test]
+    fn max_payload_boundary() {
+        let payload = [0xAA; MAX_MSG_DATA];
+        let msg = Message::new(Pid(0), 0, &payload);
+        assert_eq!(msg.data_len, MAX_MSG_DATA);
+        assert_eq!(msg.data[MAX_MSG_DATA - 1], 0xAA);
+    }
 }

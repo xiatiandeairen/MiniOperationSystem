@@ -228,4 +228,55 @@ mod tests {
         let gen = TraceIdGenerator::default();
         assert_eq!(gen.next(), TraceId(1));
     }
+
+    #[test]
+    fn file_descriptor_hash_consistent() {
+        use core::hash::{Hash, Hasher};
+        struct SimpleHasher(u64);
+        impl Hasher for SimpleHasher {
+            fn finish(&self) -> u64 {
+                self.0
+            }
+            fn write(&mut self, bytes: &[u8]) {
+                for &b in bytes {
+                    self.0 = self.0.wrapping_mul(31).wrapping_add(b as u64);
+                }
+            }
+        }
+        let fd = FileDescriptor(42);
+        let mut h1 = SimpleHasher(0);
+        let mut h2 = SimpleHasher(0);
+        fd.hash(&mut h1);
+        fd.hash(&mut h2);
+        assert_eq!(h1.finish(), h2.finish());
+    }
+
+    #[test]
+    fn inode_id_ordering() {
+        assert!(InodeId(0) < InodeId(1));
+        assert!(InodeId(100) > InodeId(50));
+        assert_eq!(InodeId(7), InodeId(7));
+    }
+
+    #[test]
+    fn queue_id_debug_format() {
+        let q = QueueId(99);
+        let s = format!("{:?}", q);
+        assert!(s.contains("99"));
+    }
+
+    #[test]
+    fn shm_id_debug_format() {
+        let s = ShmId(5);
+        let dbg = format!("{:?}", s);
+        assert!(dbg.contains("5"));
+    }
+
+    #[test]
+    fn pid_allocator_many_ids() {
+        let alloc = PidAllocator::new();
+        for i in 0..100u32 {
+            assert_eq!(alloc.allocate(), Pid(i));
+        }
+    }
 }
