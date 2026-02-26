@@ -304,6 +304,11 @@ static COMMANDS: &[Command] = &[
         description: "Export current learning session summary",
         handler: basic::cmd_export_session,
     },
+    Command {
+        name: "cheatsheet",
+        description: "Quick reference card of all command categories",
+        handler: basic::cmd_cheatsheet,
+    },
 ];
 
 /// Finds a command by name.
