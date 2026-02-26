@@ -283,6 +283,11 @@ static COMMANDS: &[Command] = &[
         description: "Show MiniOS version and system information",
         handler: basic::cmd_version,
     },
+    Command {
+        name: "sleep",
+        description: "Sleep for N ticks (default 100)",
+        handler: basic::cmd_sleep,
+    },
 ];
 
 /// Finds a command by name.

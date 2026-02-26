@@ -49,6 +49,33 @@ pub fn cmd_uptime(_args: &[&str]) {
     super::journey::mark(super::journey::STEP_UPTIME);
 }
 
+/// Sleeps for the specified number of ticks (default 100).
+pub fn cmd_sleep(args: &[&str]) {
+    let ticks = if args.is_empty() {
+        100
+    } else {
+        args[0]
+            .bytes()
+            .fold(0u64, |a, b| {
+                if (b'0'..=b'9').contains(&b) {
+                    a * 10 + (b - b'0') as u64
+                } else {
+                    a
+                }
+            })
+            .max(1)
+    };
+    let start = minios_hal::interrupts::tick_count();
+    println!("Sleeping for {} ticks...", ticks);
+    while minios_hal::interrupts::tick_count() - start < ticks {
+        minios_hal::cpu::hlt();
+    }
+    println!(
+        "Awake! (slept {} ticks)",
+        minios_hal::interrupts::tick_count() - start
+    );
+}
+
 /// Shows interrupt statistics (timer and keyboard counters).
 pub fn cmd_interrupts(_args: &[&str]) {
     let stats = minios_hal::interrupts::interrupt_stats();
