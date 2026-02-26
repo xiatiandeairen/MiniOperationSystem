@@ -112,7 +112,7 @@ static COMMANDS: &[Command] = &[
     },
     Command {
         name: "trace",
-        description: "Trace subsystem (list|tree|stats|clear|export|follow)",
+        description: "Trace subsystem (list|tree|stats|clear|export|follow|filter)",
         handler: trace_cmds::cmd_trace,
     },
     Command {
@@ -199,6 +199,16 @@ static COMMANDS: &[Command] = &[
         name: "alias",
         description: "Create or list command aliases",
         handler: alias::cmd_alias,
+    },
+    Command {
+        name: "log",
+        description: "Control kernel log system (level, module, history)",
+        handler: basic::cmd_log,
+    },
+    Command {
+        name: "debug",
+        description: "Toggle debug mode (on|off|status)",
+        handler: basic::cmd_debug,
     },
     Command {
         name: "journey",
