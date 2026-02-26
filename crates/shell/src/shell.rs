@@ -114,6 +114,15 @@ fn read_line(buf: &mut LineBuffer) {
                         }
                     }
                 }
+                12 => {
+                    x86_64::instructions::interrupts::without_interrupts(|| {
+                        if let Some(ref mut c) = *minios_hal::framebuffer::CONSOLE.lock() {
+                            c.clear();
+                        }
+                    });
+                    print_prompt();
+                    print!("{}", buf.as_str());
+                }
                 ch if ch >= 0x20 => {
                     buf.push(ch);
                     print!("{}", ch as char);
