@@ -229,9 +229,33 @@ pub fn run_shell() -> ! {
     }
 }
 
+/// Expands `$VAR` references in a command line using the env store.
+fn expand_variables(line: &str) -> alloc::string::String {
+    let mut result = alloc::string::String::new();
+    let mut chars = line.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '$' {
+            let mut var = alloc::string::String::new();
+            while let Some(&c) = chars.peek() {
+                if c.is_alphanumeric() || c == '_' {
+                    var.push(c);
+                    chars.next();
+                } else {
+                    break;
+                }
+            }
+            result.push_str(&crate::commands::env_cmds::get_var(&var));
+        } else {
+            result.push(ch);
+        }
+    }
+    result
+}
+
 /// Dispatches a single command line (with alias resolution).
 fn dispatch_line(line: &str) {
-    let parsed = parser::parse(line);
+    let expanded = expand_variables(line);
+    let parsed = parser::parse(&expanded);
     if parsed.is_empty() {
         return;
     }
