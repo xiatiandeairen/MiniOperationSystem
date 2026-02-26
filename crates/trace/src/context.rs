@@ -71,3 +71,67 @@ pub fn clear() {
     let mut stack = CONTEXT_STACK.lock();
     stack.len = 0;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use minios_common::id::{SpanId, TraceId};
+
+    fn make_ctx(trace: u64, span: u64, depth: u16) -> TraceContext {
+        TraceContext {
+            trace_id: TraceId(trace),
+            current_span_id: SpanId(span),
+            depth,
+        }
+    }
+
+    #[test]
+    fn push_and_current() {
+        clear();
+        assert!(current().is_none());
+        push(make_ctx(1, 10, 0));
+        let c = current().unwrap();
+        assert_eq!(c.trace_id, TraceId(1));
+        assert_eq!(c.current_span_id, SpanId(10));
+        clear();
+    }
+
+    #[test]
+    fn push_pop_lifo() {
+        clear();
+        push(make_ctx(1, 1, 0));
+        push(make_ctx(2, 2, 1));
+        let top = pop().unwrap();
+        assert_eq!(top.trace_id, TraceId(2));
+        let next = pop().unwrap();
+        assert_eq!(next.trace_id, TraceId(1));
+        assert!(pop().is_none());
+        clear();
+    }
+
+    #[test]
+    fn pop_empty_returns_none() {
+        clear();
+        assert!(pop().is_none());
+    }
+
+    #[test]
+    fn clear_empties_stack() {
+        clear();
+        push(make_ctx(1, 1, 0));
+        push(make_ctx(2, 2, 1));
+        clear();
+        assert!(current().is_none());
+        assert!(pop().is_none());
+    }
+
+    #[test]
+    fn push_returns_false_at_max_depth() {
+        clear();
+        for i in 0..MAX_DEPTH {
+            assert!(push(make_ctx(i as u64, i as u64, i as u16)));
+        }
+        assert!(!push(make_ctx(999, 999, 99)));
+        clear();
+    }
+}

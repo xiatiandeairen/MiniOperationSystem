@@ -328,4 +328,58 @@ mod tests {
             "tracer not initialized"
         );
     }
+
+    #[test]
+    fn all_from_conversions_round_trip() {
+        assert!(matches!(
+            KernelError::from(MemoryError::AlignmentError),
+            KernelError::Memory(MemoryError::AlignmentError)
+        ));
+        assert!(matches!(
+            KernelError::from(ProcessError::StackAllocationFailed),
+            KernelError::Process(ProcessError::StackAllocationFailed)
+        ));
+        assert!(matches!(
+            KernelError::from(FsError::InvalidPath),
+            KernelError::FileSystem(FsError::InvalidPath)
+        ));
+        assert!(matches!(
+            KernelError::from(IpcError::Timeout),
+            KernelError::Ipc(IpcError::Timeout)
+        ));
+        assert!(matches!(
+            KernelError::from(DriverError::Unsupported),
+            KernelError::Driver(DriverError::Unsupported)
+        ));
+        assert!(matches!(
+            KernelError::from(TraceError::NotInitialized),
+            KernelError::Trace(TraceError::NotInitialized)
+        ));
+    }
+
+    #[test]
+    fn display_all_fs_error_variants() {
+        assert_eq!(format!("{}", FsError::NotADirectory), "not a directory");
+        assert_eq!(format!("{}", FsError::NotAFile), "not a file");
+        assert_eq!(format!("{}", FsError::InvalidPath), "invalid path");
+    }
+
+    #[test]
+    fn display_all_ipc_error_variants() {
+        assert_eq!(format!("{}", IpcError::QueueNotFound), "queue not found");
+        assert_eq!(format!("{}", IpcError::InvalidMessage), "invalid message");
+    }
+
+    #[test]
+    fn memory_error_equality() {
+        assert_eq!(MemoryError::OutOfMemory, MemoryError::OutOfMemory);
+        assert_ne!(MemoryError::OutOfMemory, MemoryError::InvalidAddress);
+        assert_ne!(MemoryError::AlreadyMapped, MemoryError::NotMapped);
+    }
+
+    #[test]
+    fn process_error_equality() {
+        assert_eq!(ProcessError::InvalidPid, ProcessError::InvalidPid);
+        assert_ne!(ProcessError::MaxProcessesReached, ProcessError::InvalidPid);
+    }
 }

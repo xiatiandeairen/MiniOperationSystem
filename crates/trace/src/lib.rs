@@ -12,13 +12,21 @@
 
 #![no_std]
 
+/// Per-CPU trace context stack for parent/child span linking.
 pub mod context;
+/// Core trace engine implementing the `Tracer` trait.
 pub mod engine;
+/// Hand-rolled JSON serialiser for span data.
 pub mod export;
+/// RAII span guard that ends a span on drop.
 pub mod guard;
+/// Convenience macros (`trace_span!`, `trace_event!`).
 pub mod macros;
+/// No-op tracer for tests and disabled-tracing contexts.
 pub mod null;
+/// Fixed-size ring buffer storage for span records.
 pub mod ringbuffer;
+/// Span data structure representing a single traced operation.
 pub mod span;
 
 pub use engine::TRACER;

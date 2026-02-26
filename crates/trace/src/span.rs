@@ -221,4 +221,30 @@ mod tests {
         assert_eq!(copy.pid, span.pid);
         assert_eq!(copy.depth, span.depth);
     }
+
+    #[test]
+    fn name_truncation_exactly_64_chars() {
+        let name: &str = &"X".repeat(MAX_NAME_LEN);
+        let span = Span::new(name, "m", TraceId(1), SpanId(1), None, 0, 0);
+        assert_eq!(span.name_len, MAX_NAME_LEN);
+        assert_eq!(span.name_str(), name);
+    }
+
+    #[test]
+    fn module_truncation_exactly_32_chars() {
+        let module: &str = &"Y".repeat(MAX_MODULE_LEN);
+        let span = Span::new("op", module, TraceId(1), SpanId(1), None, 0, 0);
+        assert_eq!(span.module_len, MAX_MODULE_LEN);
+        assert_eq!(span.module_str(), module);
+    }
+
+    #[test]
+    fn clone_preserves_parent_span_id() {
+        let span = Span::new("c", "t", TraceId(1), SpanId(5), Some(SpanId(2)), 0, 0);
+        let copy = span.clone();
+        assert_eq!(copy.parent_span_id, Some(SpanId(2)));
+        assert_eq!(copy.start_tsc, span.start_tsc);
+        assert_eq!(copy.end_tsc, span.end_tsc);
+        assert_eq!(copy.status, span.status);
+    }
 }

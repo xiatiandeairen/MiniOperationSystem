@@ -99,6 +99,21 @@ fn read_line(buf: &mut LineBuffer) {
                     buf.backspace();
                     print!("\x08 \x08");
                 }
+                b'\t' => {
+                    let prefix = buf.as_str();
+                    if !prefix.is_empty() {
+                        if let Some(match_name) = find_completion(prefix) {
+                            while !buf.is_empty() {
+                                buf.backspace();
+                                print!("\x08 \x08");
+                            }
+                            for b in match_name.bytes() {
+                                buf.push(b);
+                                print!("{}", b as char);
+                            }
+                        }
+                    }
+                }
                 ch if ch >= 0x20 => {
                     buf.push(ch);
                     print!("{}", ch as char);
@@ -116,6 +131,36 @@ fn print_prompt() {
     minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::GREEN);
     print!("MiniOS $ ");
     minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
+}
+
+/// Returns a unique command name matching the given prefix, or `None` if
+/// zero or multiple commands match (ambiguous).
+fn find_completion(prefix: &str) -> Option<&'static str> {
+    let mut found: Option<&str> = None;
+    for cmd in crate::commands::list_commands() {
+        if cmd.name.starts_with(prefix) {
+            if found.is_some() {
+                return None;
+            }
+            found = Some(cmd.name);
+        }
+    }
+    found
+}
+
+/// Returns a command whose name shares the first two characters with
+/// `input`, or `None` if no plausible match exists.
+fn find_similar(input: &str) -> Option<&'static str> {
+    if input.len() < 2 {
+        return None;
+    }
+    let prefix = &input[..2];
+    for cmd in crate::commands::list_commands() {
+        if cmd.name.starts_with(prefix) && cmd.name != input {
+            return Some(cmd.name);
+        }
+    }
+    None
 }
 
 /// Runs the interactive shell loop. This function never returns.
@@ -228,8 +273,13 @@ fn dispatch_line(line: &str) {
     match commands::find_command(cmd_name) {
         Some(command) => (command.handler)(args),
         None => {
+            let suggestion = find_similar(cmd_name);
             minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::RED);
             println!("Unknown command: {}", cmd_name);
+            if let Some(s) = suggestion {
+                minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::YELLOW);
+                println!("Did you mean: {}?", s);
+            }
             minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
         }
     }

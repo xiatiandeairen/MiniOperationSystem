@@ -320,4 +320,50 @@ mod tests {
         let stats = sched.stats();
         assert_eq!(stats.queue_lengths[0], 1);
     }
+
+    #[test]
+    fn remove_current_task_clears_current() {
+        let mut sched = MlfqScheduler::new();
+        sched.add_task(Pid(10), Priority::HIGH);
+        sched.set_running(Pid(10), 0);
+        assert_eq!(sched.current_pid(), Some(Pid(10)));
+        sched.remove_task(Pid(10));
+        assert!(sched.current_pid().is_none());
+    }
+
+    #[test]
+    fn boost_does_not_duplicate_tasks() {
+        let mut sched = MlfqScheduler::new();
+        sched.add_task(Pid(1), Priority(2));
+        sched.add_task(Pid(2), Priority(3));
+        sched.add_task(Pid(0), Priority(0));
+        sched.set_running(Pid(0), 0);
+        for _ in 0..BOOST_INTERVAL {
+            let dec = sched.tick();
+            if let ScheduleDecision::Switch(pid) = dec {
+                sched.set_running(pid, 0);
+            }
+        }
+        let stats = sched.stats();
+        let total_in_queues: usize = stats.queue_lengths.iter().sum();
+        assert!(total_in_queues <= 3, "no duplicates after boost");
+    }
+
+    #[test]
+    fn multiple_ticks_until_demotion() {
+        let mut sched = MlfqScheduler::new();
+        sched.add_task(Pid(0), Priority(0));
+        sched.set_running(Pid(0), 0);
+        assert_eq!(sched.tick(), ScheduleDecision::Continue);
+        let dec = sched.tick();
+        assert!(matches!(dec, ScheduleDecision::Switch(_)));
+    }
+
+    #[test]
+    fn add_task_clamps_priority() {
+        let mut sched = MlfqScheduler::new();
+        sched.add_task(Pid(0), Priority(200));
+        let stats = sched.stats();
+        assert_eq!(stats.queue_lengths[3], 1);
+    }
 }

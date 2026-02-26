@@ -332,4 +332,76 @@ mod tests {
         assert_ne!(InodeType::Directory, InodeType::CharDevice);
         assert_ne!(InodeType::CharDevice, InodeType::Special);
     }
+
+    #[test]
+    fn block_reason_all_variants_exist() {
+        let reasons = [
+            BlockReason::Io,
+            BlockReason::IpcReceive,
+            BlockReason::Sleep,
+            BlockReason::WaitChild,
+        ];
+        for (i, r) in reasons.iter().enumerate() {
+            for (j, s) in reasons.iter().enumerate() {
+                if i == j {
+                    assert_eq!(r, s);
+                } else {
+                    assert_ne!(r, s);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn scheduler_stats_default_values() {
+        let stats = SchedulerStats {
+            total_switches: 0,
+            total_ticks: 0,
+            queue_lengths: [0; 4],
+            idle_ticks: 0,
+        };
+        assert_eq!(stats.total_switches, 0);
+        assert_eq!(stats.total_ticks, 0);
+        assert_eq!(stats.queue_lengths, [0, 0, 0, 0]);
+        assert_eq!(stats.idle_ticks, 0);
+    }
+
+    #[test]
+    fn seek_whence_all_variants() {
+        let variants = [SeekWhence::Start, SeekWhence::Current, SeekWhence::End];
+        assert_eq!(variants.len(), 3);
+        assert_ne!(variants[0], variants[1]);
+        assert_ne!(variants[1], variants[2]);
+        assert_ne!(variants[0], variants[2]);
+    }
+
+    #[test]
+    fn trace_context_clone() {
+        let ctx = TraceContext {
+            trace_id: crate::id::TraceId(42),
+            current_span_id: crate::id::SpanId(7),
+            depth: 3,
+        };
+        let copy = ctx;
+        assert_eq!(copy.trace_id, crate::id::TraceId(42));
+        assert_eq!(copy.current_span_id, crate::id::SpanId(7));
+        assert_eq!(copy.depth, 3);
+    }
+
+    #[test]
+    fn attribute_value_variants() {
+        let u = AttributeValue::U64(100);
+        let i = AttributeValue::I64(-50);
+        let b = AttributeValue::Bool(true);
+        assert!(matches!(u, AttributeValue::U64(100)));
+        assert!(matches!(i, AttributeValue::I64(-50)));
+        assert!(matches!(b, AttributeValue::Bool(true)));
+    }
+
+    #[test]
+    fn device_type_variants() {
+        assert_eq!(DeviceType::CharDevice, DeviceType::CharDevice);
+        assert_eq!(DeviceType::BlockDevice, DeviceType::BlockDevice);
+        assert_ne!(DeviceType::CharDevice, DeviceType::BlockDevice);
+    }
 }
