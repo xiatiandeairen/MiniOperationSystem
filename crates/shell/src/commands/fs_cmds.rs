@@ -1,5 +1,7 @@
 //! Filesystem shell commands: ls, cat, mkdir, touch, write, pwd.
 
+extern crate alloc;
+
 use minios_common::traits::fs::FileSystem;
 use minios_common::types::{InodeType, OpenFlags};
 use minios_hal::println;
@@ -23,12 +25,19 @@ pub fn cmd_ls(args: &[&str]) {
     match vfs.list_dir(path) {
         Ok(entries) => {
             for (name, inode_type) in &entries {
-                let suffix = if *inode_type == InodeType::Directory {
-                    "/"
-                } else {
-                    ""
+                let type_char = match inode_type {
+                    InodeType::Directory => 'd',
+                    InodeType::File => '-',
+                    InodeType::CharDevice => 'c',
+                    InodeType::Special => 's',
                 };
-                println!("  {}{}", name, suffix);
+                let full = if path == "/" {
+                    alloc::format!("/{}", name)
+                } else {
+                    alloc::format!("{}/{}", path, name)
+                };
+                let size = vfs.stat(&full).map(|s| s.size).unwrap_or(0);
+                println!("  {} {:>6}  {}", type_char, size, name);
             }
         }
         Err(e) => println!("ls: {}: {}", path, e),
