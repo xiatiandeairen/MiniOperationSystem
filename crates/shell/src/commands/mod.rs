@@ -11,6 +11,7 @@ pub mod explain;
 pub mod fs_cmds;
 pub mod journey;
 pub mod lab;
+pub mod man;
 pub mod mem_cmds;
 pub mod proc_cmds;
 pub mod sched_cmds;
@@ -246,6 +247,41 @@ static COMMANDS: &[Command] = &[
         name: "bench",
         description: "Run built-in performance benchmarks (alloc, trace, fs)",
         handler: bench::cmd_bench,
+    },
+    Command {
+        name: "memmap",
+        description: "Show ASCII memory layout diagram",
+        handler: mem_cmds::cmd_memmap,
+    },
+    Command {
+        name: "pstree",
+        description: "Show process hierarchy tree",
+        handler: proc_cmds::cmd_pstree,
+    },
+    Command {
+        name: "safety",
+        description: "Show unsafe code audit summary",
+        handler: basic::cmd_safety,
+    },
+    Command {
+        name: "report",
+        description: "Export structured learning progress report",
+        handler: journey::cmd_report,
+    },
+    Command {
+        name: "man",
+        description: "Quick usage reference for a command",
+        handler: man::cmd_man,
+    },
+    Command {
+        name: "snapshot",
+        description: "Save or diff system state snapshots",
+        handler: basic::cmd_snapshot,
+    },
+    Command {
+        name: "version",
+        description: "Show MiniOS version and system information",
+        handler: basic::cmd_version,
     },
 ];
 

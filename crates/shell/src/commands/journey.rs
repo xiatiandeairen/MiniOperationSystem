@@ -163,6 +163,47 @@ pub fn cmd_journey(_args: &[&str]) {
     }
 }
 
+/// Outputs a structured learning progress report.
+pub fn cmd_report(_args: &[&str]) {
+    let completed = COMPLETED.load(Ordering::Relaxed);
+    let total = 17u32;
+    let done = (0..total).filter(|&i| completed & (1 << i) != 0).count();
+
+    println!("--- Learning Report ---");
+    println!("student: MiniOS User");
+    println!("date: (current session)");
+    println!(
+        "progress: {}/{} steps ({}%)",
+        done,
+        total,
+        done * 100 / total as usize
+    );
+    println!("chapters_completed:");
+    println!("concepts_learned:");
+    if completed & (1 << 1) != 0 {
+        println!("  - process management");
+    }
+    if completed & (1 << 2) != 0 {
+        println!("  - memory management");
+    }
+    if completed & (1 << 3) != 0 {
+        println!("  - filesystem operations");
+    }
+    if completed & (1 << 5) != 0 {
+        println!("  - system internals (explain)");
+    }
+    if completed & (1 << 9) != 0 {
+        println!("  - hands-on experiments (lab)");
+    }
+    if completed & (1 << 10) != 0 {
+        println!("  - fault handling (crash)");
+    }
+    if completed & (1 << 11) != 0 {
+        println!("  - OS design comparisons");
+    }
+    println!("---");
+}
+
 /// Shows the graduation/completion report.
 pub fn cmd_graduation(_args: &[&str]) {
     let done = (0..TOTAL_STEPS).filter(|&i| is_done(i)).count();

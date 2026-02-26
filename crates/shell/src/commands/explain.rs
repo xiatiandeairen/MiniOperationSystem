@@ -19,6 +19,10 @@ pub fn cmd_explain(args: &[&str]) {
         "pagetable" => explain_pagetable(),
         "frames" => explain_frames(),
         "log" => explain_log(),
+        "top" | "bench" | "syllabus" | "snapshot" | "version" | "man" | "pstree" | "memmap" => {
+            println!("Use 'man {}' for usage information.", args[0]);
+            println!("Use 'compare' or 'lab' for deeper learning.");
+        }
         other => println!("No explanation available for '{}'.", other),
     }
     super::journey::mark(super::journey::STEP_EXPLAIN);
