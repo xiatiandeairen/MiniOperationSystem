@@ -171,6 +171,11 @@ static COMMANDS: &[Command] = &[
         handler: basic::cmd_repeat,
     },
     Command {
+        name: "syllabus",
+        description: "Show structured OS course outline",
+        handler: basic::cmd_syllabus,
+    },
+    Command {
         name: "history",
         description: "Show command history",
         handler: basic::cmd_history,

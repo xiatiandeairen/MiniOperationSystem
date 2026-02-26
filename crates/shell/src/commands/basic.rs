@@ -295,3 +295,39 @@ pub fn cmd_run(args: &[&str]) {
     }
     super::journey::mark(super::journey::STEP_RUN);
 }
+
+/// Prints a structured course outline for using MiniOS as a teaching tool.
+pub fn cmd_syllabus(_args: &[&str]) {
+    println!("=== MiniOS Operating Systems Syllabus ===");
+    println!();
+    println!("Module 1: Process Management (2 hours)");
+    println!("  Concepts: PCB, state machine, scheduling algorithms");
+    println!("  Commands: ps, spawn, kill, signal, sched, compare scheduler");
+    println!("  Lab: lab scheduler-fairness");
+    println!("  Reading: explain ps, explain spawn, explain sched");
+    println!();
+    println!("Module 2: Memory Management (2 hours)");
+    println!("  Concepts: Physical frames, virtual pages, heap allocation");
+    println!("  Commands: meminfo, frames, pagetable, alloc");
+    println!("  Lab: lab memory-usage, lab page-table-walk");
+    println!("  Reading: explain meminfo, explain frames, explain pagetable");
+    println!();
+    println!("Module 3: File Systems (1.5 hours)");
+    println!("  Concepts: VFS, inodes, file descriptors, directory tree");
+    println!("  Commands: ls, cat, mkdir, write, touch, rm");
+    println!("  Lab: lab fs-operations");
+    println!("  Reading: explain ls, explain cat, compare filesystem");
+    println!();
+    println!("Module 4: System Calls & IPC (1.5 hours)");
+    println!("  Concepts: Syscall interface, message passing, tracing");
+    println!("  Commands: trace follow, trace tree, log, compare syscall/ipc");
+    println!("  Lab: lab trace-overhead");
+    println!("  Reading: explain trace, compare syscall, compare ipc");
+    println!();
+    println!("Module 5: Fault Handling (1 hour)");
+    println!("  Concepts: Interrupts, exceptions, OOM, stack overflow");
+    println!("  Commands: crash oom, crash stack, crash divide-zero, interrupts");
+    println!("  Reading: explain log");
+    println!();
+    println!("Total: ~8 hours of guided hands-on learning");
+}
