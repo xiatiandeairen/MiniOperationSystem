@@ -1,91 +1,52 @@
-# MiniOperationSystem
+# MiniOS — Learn Operating Systems by Doing
 
-A micro operating system kernel for x86_64, written in Rust.
+> An interactive teaching OS. Boot it, type commands, see how an OS works from the inside.
 
-**Features:** decoupled trait-based architecture · full-chain trace
-logging · interactive shell · browser-based trace visualization.
-
-## Quick Start
+## 30-Second Start
 
 ```bash
-# Prerequisites: Rust nightly + QEMU
-cargo make run          # headless (serial on stdout)
-cargo make run-gui      # graphical QEMU window with shell
+cargo make run-gui    # Boot with graphical window
 ```
 
-First run will auto-build the boot image tool (~60s one-time cost).
-
-## What You'll See
-
-On boot, MiniOS initialises all subsystems and drops into a shell:
+You'll see a shell prompt. Try these:
 
 ```
-Hello, MiniOS!
-Boot successful. System ready.
-MiniOS Shell v0.1
-Type 'help' for available commands.
-
-MiniOS $ help
-Available commands:
-  help     - List all available commands
-  echo     - Print arguments to the screen
-  clear    - Clear the VGA screen
-  uptime   - Show tick count since boot
-  meminfo  - Show memory statistics
-  ls       - List directory contents
-  cat      - Print file contents
-  mkdir    - Create a directory
-  touch    - Create an empty file
-  write    - Write content to a file
-  pwd      - Print working directory
-  ps       - List all processes
-  trace    - Trace subsystem (list|tree|stats|clear|export)
+MiniOS $ tutorial           ← guided 10-step learning path
+MiniOS $ explain ls         ← learn how a command works internally
+MiniOS $ trace follow ls /  ← see every system call in a command
+MiniOS $ compare scheduler  ← MiniOS vs Linux design differences
+MiniOS $ lab memory-usage   ← hands-on memory experiment
+MiniOS $ crash oom          ← safely trigger out-of-memory
+MiniOS $ journey            ← track your learning progress
 ```
 
-## Architecture
+## What You'll Learn
 
-13-crate Cargo workspace — each subsystem isolated behind a trait interface:
+| Topic | Commands | Concept |
+|-------|----------|---------|
+| Processes | ps, spawn, kill, sched | PCB, scheduling, context switch |
+| Memory | meminfo, frames, pagetable, alloc | Pages, frames, heap allocation |
+| Filesystem | ls, cat, mkdir, write | VFS, inodes, file descriptors |
+| Tracing | trace follow, trace tree, log | Spans, observability, debugging |
+| Faults | crash oom, crash stack | OOM, page fault, stack overflow |
+| Design | compare, explain | MLFQ vs CFS, RamFS vs ext4 |
 
-```
-crates/
-├── common/       # shared types, traits, errors
-├── hal/          # serial, framebuffer console, GDT, IDT, PIC, keyboard
-├── trace/        # ring buffer trace engine, JSON export
-├── memory/       # bitmap frame allocator, page tables, heap
-├── interrupt/    # (integrated into HAL)
-├── process/      # PCB, context switch assembly
-├── scheduler/    # MLFQ 4-level scheduler
-├── fs/           # VFS + RamFS + ProcFS
-├── ipc/          # message queues with TraceContext propagation
-├── syscall/      # syscall dispatcher
-├── shell/        # 15-command interactive terminal
-└── kernel/       # boot entry, subsystem wiring
-```
+## 44 Shell Commands
 
-## Development Commands
+Type `help` to see all commands. Type `explain <cmd>` to learn how any command works.
 
-| Command | Purpose |
-|---------|---------|
-| `cargo make build` | Compile (bare-metal cross-compile) |
-| `cargo make build-release` | Release build |
-| `cargo make test` | Host-side unit tests (59 tests) |
-| `cargo make clippy` | Lint (warnings = errors) |
-| `cargo make fmt` | Format code |
-| `cargo make ci` | fmt + clippy + test |
-| `cargo make run` | Build + boot in QEMU (headless) |
-| `cargo make run-gui` | Build + boot with graphical window |
-| `cargo make run-trace` | Boot + capture trace to file |
-| `cargo make debug` | Boot + wait for GDB on port 1234 |
+## Prerequisites
 
-## Trace Viewer
+- Rust nightly (`rust-toolchain.toml` handles this)
+- QEMU (`apt install qemu-system-x86`)
+- cargo-make (`cargo install cargo-make`)
 
-Open `trace-viewer/index.html` in a browser to visualise trace data.
-Use `trace export` in the MiniOS shell to dump spans as JSON via serial.
+## Project Structure
 
-## Documentation
+13-crate Rust workspace. See [project.md](project.md) for architecture details.
 
-- [spec.md](spec.md) — full technical specification
-- [plan.md](plan.md) — development plan (500 tasks, 10 checkpoints)
-- [claude.md](claude.md) — AI self-driving development rules
-- [project.md](project.md) — project status and index
-- [docs/tasks/](docs/tasks/) — iteration plans and results
+## Links
+
+- [Tutorial](docs/releases/) — Version history
+- [spec.md](spec.md) — Technical specification
+- [claude.md](claude.md) — Development rules
