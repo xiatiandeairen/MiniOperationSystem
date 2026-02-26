@@ -185,6 +185,16 @@ pub fn cmd_debug(args: &[&str]) {
     }
 }
 
+/// Displays MiniOS version and system information.
+pub fn cmd_version(_args: &[&str]) {
+    println!("MiniOS v0.26.0");
+    println!("Architecture: x86-64 (bare metal)");
+    println!("Shell commands: {}", super::list_commands().len());
+    println!("Subsystems: HAL, Trace, Memory, Process, Scheduler, FS, IPC, Syscall, Shell");
+    println!("Tests: 105+");
+    println!("Build: Rust nightly, bootloader_api 0.11");
+}
+
 /// Saves or diffs a system state snapshot for comparison over time.
 pub fn cmd_snapshot(args: &[&str]) {
     if args.is_empty() || args[0] == "save" {

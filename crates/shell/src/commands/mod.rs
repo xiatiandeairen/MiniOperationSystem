@@ -278,6 +278,11 @@ static COMMANDS: &[Command] = &[
         description: "Save or diff system state snapshots",
         handler: basic::cmd_snapshot,
     },
+    Command {
+        name: "version",
+        description: "Show MiniOS version and system information",
+        handler: basic::cmd_version,
+    },
 ];
 
 /// Finds a command by name.
