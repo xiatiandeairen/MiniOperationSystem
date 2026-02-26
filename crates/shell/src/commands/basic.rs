@@ -39,6 +39,20 @@ pub fn cmd_uptime(_args: &[&str]) {
     serial_println!("Uptime: {} ticks", ticks);
 }
 
+/// Shows interrupt statistics (timer and keyboard counters).
+pub fn cmd_interrupts(_args: &[&str]) {
+    let stats = minios_hal::interrupts::interrupt_stats();
+    let uptime_secs = stats.timer_count / 100;
+    println!("IRQ  NAME       COUNT     RATE");
+    println!("0    Timer      {:<9} ~100/s", stats.timer_count);
+    println!("1    Keyboard   {:<9} on-demand", stats.keyboard_count);
+    println!();
+    println!(
+        "Uptime: ~{} seconds ({} ticks)",
+        uptime_secs, stats.timer_count
+    );
+}
+
 /// Displays memory statistics (frame allocator + heap).
 pub fn cmd_meminfo(_args: &[&str]) {
     let stats = minios_memory::get_stats();

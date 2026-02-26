@@ -57,8 +57,17 @@ pub fn cmd_kill(args: &[&str]) {
     println!("Process {} terminated.", pid);
 }
 
-/// Displays scheduler queue lengths and runtime statistics.
-pub fn cmd_sched(_args: &[&str]) {
+/// Displays scheduler queue lengths, runtime statistics, or configuration.
+pub fn cmd_sched(args: &[&str]) {
+    let sub = if args.is_empty() { "status" } else { args[0] };
+    match sub {
+        "status" | "" => sched_status(),
+        "config" => sched_config(&args[1..]),
+        _ => println!("Usage: sched [status|config [boost <N>]]"),
+    }
+}
+
+fn sched_status() {
     let sched = minios_scheduler::SCHEDULER.lock();
     let stats = sched.stats();
     let names = ["HIGH", "MED", "LOW", "IDLE"];
@@ -72,6 +81,23 @@ pub fn cmd_sched(_args: &[&str]) {
         "Total switches: {}, Total ticks: {}",
         stats.total_switches, stats.total_ticks
     );
+}
+
+fn sched_config(args: &[&str]) {
+    if args.is_empty() {
+        println!("MLFQ Configuration:");
+        println!("  Queue 0 [HIGH]: time_slice = 2 ticks");
+        println!("  Queue 1 [MED]:  time_slice = 4 ticks");
+        println!("  Queue 2 [LOW]:  time_slice = 8 ticks");
+        println!("  Queue 3 [IDLE]: time_slice = 16 ticks");
+        let sched = minios_scheduler::SCHEDULER.lock();
+        let stats = sched.stats();
+        println!("  Total switches: {}", stats.total_switches);
+        println!("  Total ticks:    {}", stats.total_ticks);
+        println!("  Idle ticks:     {}", stats.idle_ticks);
+        return;
+    }
+    println!("Config display only in v0.3.0. Runtime modification coming later.");
 }
 
 /// Changes the scheduling priority of a process.

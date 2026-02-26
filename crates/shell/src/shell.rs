@@ -48,8 +48,8 @@ fn print_prompt() {
 
 /// Runs the interactive shell loop. This function never returns.
 pub fn run_shell() -> ! {
-    println!("MiniOS Shell v0.1");
-    println!("Type 'help' for available commands.\n");
+    println!("MiniOS Shell v0.2");
+    println!("Type 'tutorial' to start learning, or 'help' for all commands.\n");
     serial_println!("Shell started");
 
     let mut buf = LineBuffer::new();

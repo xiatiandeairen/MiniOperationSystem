@@ -48,6 +48,12 @@ impl InterruptIndex {
 /// Monotonic tick counter incremented by the timer interrupt handler.
 static TICK_COUNT: AtomicU64 = AtomicU64::new(0);
 
+/// Total number of timer interrupts received since boot.
+static TIMER_COUNT: AtomicU64 = AtomicU64::new(0);
+
+/// Total number of keyboard interrupts received since boot.
+static KEYBOARD_COUNT: AtomicU64 = AtomicU64::new(0);
+
 /// Whether the timer tick callback is installed.
 static TIMER_CALLBACK_SET: AtomicBool = AtomicBool::new(false);
 
@@ -57,6 +63,30 @@ static TIMER_CALLBACK: Mutex<Option<fn()>> = Mutex::new(None);
 /// Returns the number of timer ticks since boot.
 pub fn tick_count() -> u64 {
     TICK_COUNT.load(Ordering::Relaxed)
+}
+
+/// Returns the total number of timer interrupts since boot.
+pub fn timer_interrupt_count() -> u64 {
+    TIMER_COUNT.load(Ordering::Relaxed)
+}
+
+/// Returns the total number of keyboard interrupts since boot.
+pub fn keyboard_interrupt_count() -> u64 {
+    KEYBOARD_COUNT.load(Ordering::Relaxed)
+}
+
+/// Snapshot of all interrupt counters.
+pub struct InterruptStats {
+    pub timer_count: u64,
+    pub keyboard_count: u64,
+}
+
+/// Returns a consistent snapshot of all interrupt counters.
+pub fn interrupt_stats() -> InterruptStats {
+    InterruptStats {
+        timer_count: TICK_COUNT.load(Ordering::Relaxed),
+        keyboard_count: KEYBOARD_COUNT.load(Ordering::Relaxed),
+    }
 }
 
 /// Registers a function to be called on every timer interrupt.
@@ -133,6 +163,7 @@ extern "x86-interrupt" fn general_protection_fault_handler(
 
 extern "x86-interrupt" fn timer_handler(_stack_frame: InterruptStackFrame) {
     TICK_COUNT.fetch_add(1, Ordering::Relaxed);
+    TIMER_COUNT.fetch_add(1, Ordering::Relaxed);
 
     if TIMER_CALLBACK_SET.load(Ordering::Acquire) {
         if let Some(cb) = *TIMER_CALLBACK.lock() {
@@ -149,6 +180,7 @@ extern "x86-interrupt" fn timer_handler(_stack_frame: InterruptStackFrame) {
 
 extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame) {
     use x86_64::instructions::port::Port;
+    KEYBOARD_COUNT.fetch_add(1, Ordering::Relaxed);
     let mut port = Port::new(0x60);
     // SAFETY: Reading port 0x60 retrieves the keyboard scancode and
     // is required to acknowledge the keyboard interrupt.
