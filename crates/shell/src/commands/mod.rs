@@ -262,6 +262,11 @@ static COMMANDS: &[Command] = &[
         description: "Show unsafe code audit summary",
         handler: basic::cmd_safety,
     },
+    Command {
+        name: "report",
+        description: "Export structured learning progress report",
+        handler: journey::cmd_report,
+    },
 ];
 
 /// Finds a command by name.
