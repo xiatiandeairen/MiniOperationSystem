@@ -108,6 +108,10 @@ impl Priority {
 pub struct ProcessInfo {
     /// Process identifier.
     pub pid: Pid,
+    /// Human-readable name (fixed-size buffer).
+    pub name: [u8; 32],
+    /// Actual length of the name.
+    pub name_len: usize,
     /// Current lifecycle state.
     pub state: ProcessState,
     /// Scheduling priority.

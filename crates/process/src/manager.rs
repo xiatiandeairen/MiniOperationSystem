@@ -139,6 +139,8 @@ pub fn list_processes() -> Vec<ProcessInfo> {
         .filter_map(|slot| {
             slot.as_ref().map(|p| ProcessInfo {
                 pid: p.pid,
+                name: p.name,
+                name_len: p.name_len,
                 state: p.state,
                 priority: p.priority,
                 cpu_time_ticks: p.cpu_time,

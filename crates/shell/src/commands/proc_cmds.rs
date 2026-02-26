@@ -2,17 +2,18 @@
 
 use minios_hal::println;
 
-/// Lists all processes with their PID, state, priority, and CPU time.
+/// Lists all processes with their PID, name, state, priority, and CPU time.
 pub fn cmd_ps(_args: &[&str]) {
     let procs = minios_process::manager::list_processes();
     println!(
-        "{:<6} {:<12} {:<10} {}",
-        "PID", "STATE", "PRIORITY", "CPU_TIME"
+        "{:>5} {:8} {:>10} {:>5} {:>10}",
+        "PID", "NAME", "STATE", "PRIO", "CPU_TIME"
     );
     for p in &procs {
+        let name = core::str::from_utf8(&p.name[..p.name_len]).unwrap_or("?");
         println!(
-            "{:<6} {:<12} {:<10} {}",
-            p.pid, p.state, p.priority.0, p.cpu_time_ticks
+            "{:>5} {:8} {:>10} {:>5} {:>10}",
+            p.pid, name, p.state, p.priority.0, p.cpu_time_ticks
         );
     }
     super::journey::mark(super::journey::STEP_PS);
@@ -23,12 +24,13 @@ pub fn cmd_pstree(_args: &[&str]) {
     let procs = minios_process::manager::list_processes();
     println!("Process Tree:");
     for p in &procs {
+        let name = core::str::from_utf8(&p.name[..p.name_len]).unwrap_or("?");
         if p.pid.0 == 0 {
-            println!("  PID 0 [idle] {}", p.state);
+            println!("  PID 0 [{}] {}", name, p.state);
         } else {
             println!(
                 "  \u{2514}\u{2500} PID {} [{}] {} (cpu: {})",
-                p.pid, p.state, p.priority.0, p.cpu_time_ticks
+                p.pid, name, p.state, p.cpu_time_ticks
             );
         }
     }
@@ -70,13 +72,14 @@ pub fn cmd_top(_args: &[&str]) {
     );
     println!();
     println!(
-        "{:>5} {:>10} {:>5} {:>10}",
-        "PID", "STATE", "PRIO", "CPU_TIME"
+        "{:>5} {:8} {:>10} {:>5} {:>10}",
+        "PID", "NAME", "STATE", "PRIO", "CPU_TIME"
     );
     for p in &procs {
+        let name = core::str::from_utf8(&p.name[..p.name_len]).unwrap_or("?");
         println!(
-            "{:>5} {:>10} {:>5} {:>10}",
-            p.pid, p.state, p.priority.0, p.cpu_time_ticks
+            "{:>5} {:8} {:>10} {:>5} {:>10}",
+            p.pid, name, p.state, p.priority.0, p.cpu_time_ticks
         );
     }
 }
