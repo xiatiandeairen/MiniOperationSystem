@@ -53,6 +53,17 @@ pub fn cmd_interrupts(_args: &[&str]) {
     );
 }
 
+/// Lists the command history buffer.
+pub fn cmd_history(_args: &[&str]) {
+    let hist = crate::shell::HISTORY.lock();
+    let count = hist.len();
+    for i in 0..count {
+        if let Some(entry) = hist.get(i) {
+            println!("  {}  {}", i + 1, entry);
+        }
+    }
+}
+
 /// Displays memory statistics (frame allocator + heap).
 pub fn cmd_meminfo(_args: &[&str]) {
     let stats = minios_memory::get_stats();
