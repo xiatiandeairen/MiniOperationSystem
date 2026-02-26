@@ -23,11 +23,9 @@ fn read_line(buf: &mut LineBuffer) {
                     println!();
                     return;
                 }
-                8 | 127 => {
-                    if !buf.is_empty() {
-                        buf.backspace();
-                        print!("\x08 \x08");
-                    }
+                8 | 127 if !buf.is_empty() => {
+                    buf.backspace();
+                    print!("\x08 \x08");
                 }
                 ch if ch >= 0x20 => {
                     buf.push(ch);

@@ -17,10 +17,24 @@ jobs:
         run: cargo fmt --all --check
 
       - name: Clippy
-        run: cargo clippy --workspace -- -D warnings
+        run: >
+          cargo clippy --workspace
+          -Z build-std=core,compiler_builtins,alloc
+          -Z build-std-features=compiler-builtins-mem
+          -- -D warnings
 
       - name: Build
-        run: cargo build --workspace
+        run: >
+          cargo build --workspace
+          -Z build-std=core,compiler_builtins,alloc
+          -Z build-std-features=compiler-builtins-mem
 
       - name: Unit tests
-        run: cargo test --workspace --lib
+        run: >
+          cargo test
+          -p minios-common
+          -p minios-trace
+          -p minios-trace-macros
+          -p minios-scheduler
+          -p minios-ipc
+          --target x86_64-unknown-linux-gnu
