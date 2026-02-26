@@ -314,6 +314,11 @@ static COMMANDS: &[Command] = &[
         description: "Show RamFS storage statistics",
         handler: fs_cmds::cmd_df,
     },
+    Command {
+        name: "faq",
+        description: "Answer common learner questions",
+        handler: basic::cmd_faq,
+    },
 ];
 
 /// Finds a command by name.

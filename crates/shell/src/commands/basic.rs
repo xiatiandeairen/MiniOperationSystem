@@ -431,6 +431,31 @@ pub fn cmd_cheatsheet(_args: &[&str]) {
     println!("+---------------------------------------+");
 }
 
+/// Answers common learner questions about MiniOS.
+pub fn cmd_faq(_args: &[&str]) {
+    println!("=== Frequently Asked Questions ===");
+    println!();
+    println!("Q: How do I start learning?");
+    println!("A: Type 'tutorial' for a guided 10-step walkthrough.");
+    println!();
+    println!("Q: What does 'explain' do?");
+    println!("A: Shows how a command works internally without running it.");
+    println!();
+    println!("Q: Can I break the system?");
+    println!("A: Yes! 'crash oom' safely demonstrates failures. Try it!");
+    println!();
+    println!("Q: How do I see what the OS is doing internally?");
+    println!("A: 'trace follow <cmd>' shows every system call in a command.");
+    println!("   'log level debug' enables detailed kernel logging.");
+    println!();
+    println!("Q: How do I track my progress?");
+    println!("A: 'journey' shows your learning path. 'graduation' for final report.");
+    println!();
+    println!("Q: Is this a real operating system?");
+    println!("A: Yes! It boots on real x86-64 hardware (via QEMU). It has real");
+    println!("   memory management, process scheduling, and a filesystem.");
+}
+
 /// Prints a structured course outline for using MiniOS as a teaching tool.
 pub fn cmd_syllabus(_args: &[&str]) {
     println!("=== MiniOS Operating Systems Syllabus ===");
