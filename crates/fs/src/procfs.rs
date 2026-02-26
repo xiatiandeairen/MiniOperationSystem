@@ -18,6 +18,10 @@ pub fn read_procfs(path: &str) -> Result<Vec<u8>, FsError> {
     match path {
         "/proc/meminfo" => Ok(generate_meminfo()),
         "/proc/uptime" => Ok(generate_uptime()),
+        "/proc/interrupts" => Ok(generate_interrupts()),
+        "/proc/scheduler" => Ok(generate_scheduler()),
+        "/proc/version" => Ok(generate_version()),
+        "/proc/trace" => Ok(generate_trace_stats()),
         _ => Err(FsError::NotFound),
     }
 }
@@ -25,7 +29,8 @@ pub fn read_procfs(path: &str) -> Result<Vec<u8>, FsError> {
 /// Returns metadata for a procfs entry.
 pub fn stat_procfs(path: &str) -> Result<FileStat, FsError> {
     match path {
-        "/proc/meminfo" | "/proc/uptime" | "/proc" => Ok(FileStat {
+        "/proc/meminfo" | "/proc/uptime" | "/proc/interrupts" | "/proc/scheduler"
+        | "/proc/version" | "/proc/trace" | "/proc" => Ok(FileStat {
             size: 0,
             inode_type: InodeType::Special,
             created_at: 0,
@@ -60,4 +65,50 @@ fn generate_meminfo() -> Vec<u8> {
 fn generate_uptime() -> Vec<u8> {
     let ticks = minios_hal::interrupts::tick_count();
     format!("{} ticks\n", ticks).into_bytes()
+}
+
+fn generate_interrupts() -> Vec<u8> {
+    let stats = minios_hal::interrupts::interrupt_stats();
+    let uptime_secs = stats.timer_count / 100;
+    format!(
+        "IRQ 0 (Timer):    {} ({}/s)\n\
+         IRQ 1 (Keyboard): {}\n",
+        stats.timer_count,
+        stats.timer_count / uptime_secs.max(1),
+        stats.keyboard_count,
+    )
+    .into_bytes()
+}
+
+fn generate_scheduler() -> Vec<u8> {
+    let sched = minios_scheduler::SCHEDULER.lock();
+    let stats = sched.stats();
+    format!(
+        "Total switches: {}\n\
+         Total ticks: {}\n\
+         Idle ticks: {}\n\
+         Queue lengths: {:?}\n",
+        stats.total_switches, stats.total_ticks, stats.idle_ticks, stats.queue_lengths,
+    )
+    .into_bytes()
+}
+
+fn generate_version() -> Vec<u8> {
+    "MiniOS v0.3.0 (x86_64)\n\
+     Build: Rust nightly, bootloader_api 0.11\n\
+     Shell commands: 25+\n"
+        .as_bytes()
+        .to_vec()
+}
+
+fn generate_trace_stats() -> Vec<u8> {
+    use minios_common::traits::trace::Tracer;
+    let stats = minios_trace::TRACER.stats();
+    format!(
+        "Total spans: {}\n\
+         Buffer capacity: {}\n\
+         Buffer used: {}\n",
+        stats.total_spans_written, stats.buffer_capacity, stats.buffer_used,
+    )
+    .into_bytes()
 }

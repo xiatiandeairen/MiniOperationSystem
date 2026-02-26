@@ -8,5 +8,6 @@ description = "VFS and filesystem drivers for MiniOS"
 minios-common = { path = "../common" }
 minios-hal = { path = "../hal" }
 minios-memory = { path = "../memory" }
+minios-scheduler = { path = "../scheduler" }
 minios-trace = { path = "../trace" }
 spin = { workspace = true }
