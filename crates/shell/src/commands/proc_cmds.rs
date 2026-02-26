@@ -53,7 +53,10 @@ pub fn cmd_top(_args: &[&str]) {
         int_stats.timer_count, int_stats.keyboard_count
     );
     println!();
-    println!("{:>5} {:>10} {:>5} {:>10}", "PID", "STATE", "PRIO", "CPU_TIME");
+    println!(
+        "{:>5} {:>10} {:>5} {:>10}",
+        "PID", "STATE", "PRIO", "CPU_TIME"
+    );
     for p in &procs {
         println!(
             "{:>5} {:>10} {:>5} {:>10}",
