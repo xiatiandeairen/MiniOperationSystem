@@ -152,6 +152,7 @@ dependencies = [
  "minios-process",
  "minios-trace",
  "spin",
+ "x86_64",
 ]
 
 [[package]]
