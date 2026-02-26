@@ -225,6 +225,15 @@ pub fn run_shell() -> ! {
             continue;
         }
 
+        // Output redirect: cmd > file
+        if line.contains(" > ") {
+            let parts: Vec<&str> = line.splitn(2, " > ").collect();
+            if parts.len() == 2 {
+                execute_redirect(parts[0].trim(), parts[1].trim());
+                continue;
+            }
+        }
+
         dispatch_line(line);
     }
 }
@@ -315,6 +324,27 @@ fn dispatch_line(line: &str) {
             }
             minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
         }
+    }
+}
+
+/// Executes a command and writes its output to a file.
+fn execute_redirect(cmd: &str, file: &str) {
+    use minios_common::traits::fs::FileSystem;
+    use minios_common::types::OpenFlags;
+
+    let captured = capture_command(cmd);
+    let vfs = minios_fs::VFS.lock();
+    if let Some(vfs) = vfs.as_ref() {
+        let fd = match vfs.open(file, OpenFlags::CREATE | OpenFlags::WRITE) {
+            Ok(fd) => fd,
+            Err(e) => {
+                println!("redirect: {}: {}", file, e);
+                return;
+            }
+        };
+        let _ = vfs.write(fd, &captured);
+        let _ = vfs.close(fd);
+        println!("Output written to {} ({} bytes)", file, captured.len());
     }
 }
 
