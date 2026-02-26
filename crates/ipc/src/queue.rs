@@ -92,3 +92,59 @@ impl MessageQueue {
         self.count == 0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use minios_common::error::IpcError;
+
+    #[test]
+    fn send_and_receive() {
+        let mut q = MessageQueue::new(4);
+        let msg = Message::new(Pid(0), 1, b"hello");
+        q.send(msg).unwrap();
+        let recv = q.receive().unwrap();
+        assert_eq!(recv.sender, Pid(0));
+        assert_eq!(recv.msg_type, 1);
+        assert_eq!(&recv.data[..recv.data_len], b"hello");
+    }
+
+    #[test]
+    fn fifo_order() {
+        let mut q = MessageQueue::new(4);
+        q.send(Message::new(Pid(0), 1, b"first")).unwrap();
+        q.send(Message::new(Pid(0), 2, b"second")).unwrap();
+        q.send(Message::new(Pid(0), 3, b"third")).unwrap();
+        let a = q.receive().unwrap();
+        let b = q.receive().unwrap();
+        let c = q.receive().unwrap();
+        assert_eq!(&a.data[..a.data_len], b"first");
+        assert_eq!(&b.data[..b.data_len], b"second");
+        assert_eq!(&c.data[..c.data_len], b"third");
+    }
+
+    #[test]
+    fn full_queue_returns_error() {
+        let mut q = MessageQueue::new(2);
+        q.send(Message::new(Pid(0), 0, b"a")).unwrap();
+        q.send(Message::new(Pid(0), 0, b"b")).unwrap();
+        let r = q.send(Message::new(Pid(0), 0, b"c"));
+        assert!(matches!(r, Err(IpcError::QueueFull)));
+    }
+
+    #[test]
+    fn empty_queue_returns_error() {
+        let mut q = MessageQueue::new(2);
+        let r = q.receive();
+        assert!(matches!(r, Err(IpcError::QueueEmpty)));
+    }
+
+    #[test]
+    fn message_new_truncates() {
+        let payload: [u8; 300] = [42; 300];
+        let msg = Message::new(Pid(1), 0, &payload);
+        assert_eq!(msg.data_len, MAX_MSG_DATA);
+        assert_eq!(msg.data[0], 42);
+        assert_eq!(msg.data[MAX_MSG_DATA - 1], 42);
+    }
+}

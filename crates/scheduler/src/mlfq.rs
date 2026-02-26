@@ -176,3 +176,106 @@ impl MlfqScheduler {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use minios_common::types::Priority;
+
+    #[test]
+    fn add_task_to_correct_queue() {
+        let mut sched = MlfqScheduler::new();
+        sched.add_task(Pid(0), Priority(0));
+        let stats = sched.stats();
+        assert_eq!(stats.queue_lengths[0], 1);
+    }
+
+    #[test]
+    fn tick_decrements_remaining() {
+        let mut sched = MlfqScheduler::new();
+        sched.add_task(Pid(0), Priority(0));
+        sched.set_running(Pid(0), 0);
+        let dec = sched.tick();
+        assert!(matches!(dec, ScheduleDecision::Continue));
+    }
+
+    #[test]
+    fn tick_preempts_on_exhaustion() {
+        let mut sched = MlfqScheduler::new();
+        sched.add_task(Pid(0), Priority(0));
+        sched.set_running(Pid(0), 0);
+        let _ = sched.tick();
+        let dec = sched.tick();
+        assert!(matches!(dec, ScheduleDecision::Switch(_)));
+    }
+
+    #[test]
+    fn boost_moves_all_to_top() {
+        let mut sched = MlfqScheduler::new();
+        sched.add_task(Pid(1), Priority(1));
+        sched.add_task(Pid(2), Priority(2));
+        sched.add_task(Pid(3), Priority(3));
+        sched.add_task(Pid(0), Priority(0));
+        sched.set_running(Pid(0), 0);
+        for _ in 0..BOOST_INTERVAL {
+            let dec = sched.tick();
+            if let ScheduleDecision::Switch(pid) = dec {
+                let q = if pid == Pid(0) {
+                    1
+                } else if pid == Pid(1) {
+                    1
+                } else if pid == Pid(2) {
+                    2
+                } else {
+                    3
+                };
+                sched.set_running(pid, q);
+            }
+        }
+        let stats = sched.stats();
+        assert!(stats.queue_lengths[0] >= 1, "boost moves tasks to queue 0");
+        assert_eq!(stats.queue_lengths[1], 0);
+        assert_eq!(stats.queue_lengths[2], 0);
+        assert_eq!(stats.queue_lengths[3], 0);
+    }
+
+    #[test]
+    fn remove_task_clears_all_queues() {
+        let mut sched = MlfqScheduler::new();
+        sched.add_task(Pid(0), Priority(0));
+        sched.remove_task(Pid(0));
+        let stats = sched.stats();
+        assert_eq!(stats.queue_lengths[0], 0);
+        assert_eq!(stats.queue_lengths[1], 0);
+        assert_eq!(stats.queue_lengths[2], 0);
+        assert_eq!(stats.queue_lengths[3], 0);
+    }
+
+    #[test]
+    fn next_task_picks_highest_priority() {
+        let mut sched = MlfqScheduler::new();
+        sched.add_task(Pid(1), Priority(2));
+        sched.add_task(Pid(0), Priority(0));
+        let first = sched.next_task();
+        assert_eq!(first, Some(Pid(0)));
+    }
+
+    #[test]
+    fn stats_accurate() {
+        let mut sched = MlfqScheduler::new();
+        sched.add_task(Pid(0), Priority(0));
+        sched.set_running(Pid(0), 0);
+        let _ = sched.tick();
+        let _ = sched.tick();
+        let stats = sched.stats();
+        assert!(stats.total_ticks >= 2);
+        assert!(stats.total_switches >= 1);
+    }
+
+    #[test]
+    fn idle_when_empty() {
+        let mut sched = MlfqScheduler::new();
+        let dec = sched.tick();
+        assert!(matches!(dec, ScheduleDecision::Idle));
+    }
+}
