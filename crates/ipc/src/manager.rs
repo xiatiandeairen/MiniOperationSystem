@@ -38,6 +38,14 @@ impl IpcManagerImpl {
 
     /// Sends a full [`Message`] to the specified queue.
     pub fn send_message(&mut self, queue: QueueId, msg: Message) -> Result<(), IpcError> {
+        minios_hal::klog!(
+            Debug,
+            "ipc",
+            "send: queue={}, {} bytes from PID {}",
+            queue.0,
+            msg.data_len,
+            msg.sender.0
+        );
         let q = self
             .queues
             .get_mut(queue.0 as usize)

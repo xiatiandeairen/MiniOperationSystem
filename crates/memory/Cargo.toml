@@ -6,6 +6,7 @@ description = "Physical and virtual memory management for MiniOS"
 
 [dependencies]
 minios-common = { path = "../common" }
+minios-hal = { path = "../hal" }
 x86_64 = { workspace = true }
 spin = { workspace = true }
 linked_list_allocator = { workspace = true }

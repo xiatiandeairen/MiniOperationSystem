@@ -6,6 +6,8 @@
 
 #![no_std]
 
+extern crate alloc;
+
 pub mod dispatcher;
 pub mod info;
 pub mod io;

@@ -14,6 +14,15 @@ use minios_common::traits::trace::Tracer;
 /// Returns the handler's result, or `-1` (ENOSYS) for unknown numbers.
 pub fn dispatch(num: u64, arg1: u64, arg2: u64, arg3: u64) -> i64 {
     let _span = minios_trace::trace_span!("syscall", module = "syscall");
+    minios_hal::klog!(
+        Debug,
+        "syscall",
+        "dispatch: num={}, args=[{},{},{}]",
+        num,
+        arg1,
+        arg2,
+        arg3
+    );
     match num {
         SYS_READ => {
             let _s = minios_trace::trace_span!("sys_read", module = "syscall");

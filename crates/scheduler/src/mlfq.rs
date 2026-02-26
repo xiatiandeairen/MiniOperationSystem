@@ -144,6 +144,12 @@ impl MlfqScheduler {
     fn preempt_current(&mut self) -> ScheduleDecision {
         let entry = self.current.take().unwrap();
         let new_q = (entry.queue + 1).min(NUM_QUEUES - 1);
+        minios_hal::klog!(
+            Debug,
+            "scheduler",
+            "preempt: demoting PID to queue {}",
+            new_q
+        );
         self.queues[new_q].push_back(entry.pid);
         self.pick_next()
     }
@@ -165,6 +171,11 @@ impl MlfqScheduler {
     /// each PID exists in exactly one queue at a time.
     fn boost_all(&mut self) {
         self.ticks_since_boost = 0;
+        minios_hal::klog!(
+            Info,
+            "scheduler",
+            "priority boost: all tasks moved to queue 0"
+        );
         for q in 1..NUM_QUEUES {
             while let Some(pid) = self.queues[q].pop_front() {
                 self.queues[0].push_back(pid);

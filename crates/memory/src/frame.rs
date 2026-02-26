@@ -3,6 +3,8 @@
 //! Tracks 4 KiB physical frames using a fixed-size bitmap large enough
 //! for 256 MiB of RAM (65 536 frames = 8 192 bytes).
 
+extern crate alloc;
+
 use bootloader_api::info::{MemoryRegion, MemoryRegionKind};
 use minios_common::error::MemoryError;
 use minios_common::traits::memory::FrameAllocator;
@@ -94,6 +96,7 @@ impl FrameAllocator for BitmapFrameAllocator {
                 if !is_bit_set(&inner.bitmap, frame_num) {
                     set_bit(&mut inner.bitmap, frame_num);
                     inner.used_frames += 1;
+                    minios_hal::klog!(Debug, "memory", "frame allocated: #{}", frame_num);
                     return Ok(frame_num as u64);
                 }
             }
@@ -112,6 +115,7 @@ impl FrameAllocator for BitmapFrameAllocator {
         }
         clear_bit(&mut inner.bitmap, idx);
         inner.used_frames -= 1;
+        minios_hal::klog!(Debug, "memory", "frame freed: #{}", idx);
         Ok(())
     }
 

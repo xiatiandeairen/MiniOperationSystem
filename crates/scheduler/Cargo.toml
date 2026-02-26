@@ -6,4 +6,5 @@ description = "MLFQ task scheduler for MiniOS"
 
 [dependencies]
 minios-common = { path = "../common" }
+minios-hal = { path = "../hal" }
 spin = { workspace = true }

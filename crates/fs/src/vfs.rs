@@ -135,6 +135,7 @@ impl Vfs {
 impl FileSystem for Vfs {
     fn open(&self, path: &str, flags: OpenFlags) -> Result<FileDescriptor, FsError> {
         let _span = minios_trace::trace_span!("vfs_open", module = "fs");
+        minios_hal::klog!(Debug, "fs", "open: path={}, flags={:?}", path, flags);
         if path.starts_with("/proc/") {
             return self.open_procfs(path);
         }
@@ -158,13 +159,18 @@ impl FileSystem for Vfs {
         let _span = minios_trace::trace_span!("vfs_read", module = "fs");
         let (is_virtual, inode, offset) = self.fd_table.lock().get_info(fd)?;
         if is_virtual {
-            return self.fd_table.lock().read_virtual(fd, buf);
+            let n = self.fd_table.lock().read_virtual(fd, buf)?;
+            minios_hal::klog!(Trace, "fs", "read: fd={}, {} bytes", fd.0, n);
+            return Ok(n);
         }
-        self.read_regular(fd, inode, offset, buf)
+        let n = self.read_regular(fd, inode, offset, buf)?;
+        minios_hal::klog!(Trace, "fs", "read: fd={}, {} bytes", fd.0, n);
+        Ok(n)
     }
 
     fn write(&self, fd: FileDescriptor, buf: &[u8]) -> Result<usize, FsError> {
         let _span = minios_trace::trace_span!("vfs_write", module = "fs");
+        minios_hal::klog!(Trace, "fs", "write: fd={}, {} bytes", fd.0, buf.len());
         let (is_virtual, inode, offset) = self.fd_table.lock().get_info(fd)?;
         if is_virtual {
             return Err(FsError::PermissionDenied);
