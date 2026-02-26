@@ -1,9 +1,37 @@
-//! Trace shell commands: trace list, tree, stats, clear, export.
+//! Trace shell commands: trace list, tree, stats, clear, export, follow.
 
 extern crate alloc;
 
 use minios_common::traits::trace::Tracer;
 use minios_hal::println;
+
+/// Returns a brief teaching description for known span names.
+fn describe_span(name: &str) -> &'static str {
+    match name {
+        "syscall" => "\u{2190} system call entry",
+        "sys_open" => "\u{2190} opens a file by path",
+        "sys_read" => "\u{2190} reads bytes from file descriptor",
+        "sys_write" => "\u{2190} writes bytes to file descriptor",
+        "sys_close" => "\u{2190} releases file descriptor",
+        "sys_exit" => "\u{2190} terminates the calling process",
+        "sys_getpid" => "\u{2190} returns current process ID",
+        "sys_yield" => "\u{2190} yields CPU to scheduler",
+        "sys_uptime" => "\u{2190} returns ticks since boot",
+        "sys_meminfo" => "\u{2190} writes memory info to buffer",
+        "vfs_open" => "\u{2190} VFS resolves path to inode",
+        "vfs_read" => "\u{2190} VFS delegates read to driver",
+        "vfs_write" => "\u{2190} VFS delegates write to driver",
+        "vfs_close" => "\u{2190} VFS releases file descriptor",
+        "vfs_mkdir" => "\u{2190} VFS creates directory inode",
+        "vfs_stat" => "\u{2190} VFS retrieves inode metadata",
+        "vfs_seek" => "\u{2190} VFS adjusts file offset",
+        "vfs_rmdir" => "\u{2190} VFS removes directory",
+        "vfs_unlink" => "\u{2190} VFS removes file",
+        "memory_init" => "\u{2190} initializes frame allocator + page tables + heap",
+        "kernel_boot" => "\u{2190} full kernel initialization sequence",
+        _ => "",
+    }
+}
 
 /// Dispatches trace sub-commands.
 pub fn cmd_trace(args: &[&str]) {
@@ -15,7 +43,8 @@ pub fn cmd_trace(args: &[&str]) {
         "stats" => trace_stats(),
         "clear" => trace_clear(),
         "export" => trace_export(),
-        _ => println!("Usage: trace <list|tree|stats|clear|export>"),
+        "follow" => trace_follow(&args[1..]),
+        _ => println!("Usage: trace <list|tree|stats|clear|export|follow>"),
     }
 }
 
@@ -63,15 +92,76 @@ fn trace_tree() {
             minios_common::types::SpanStatus::Error => "ERR",
             minios_common::types::SpanStatus::InProgress => "...",
         };
-        println!(
-            "{}[{}] {} ({} cycles) {}",
-            indent,
-            span.module_str(),
-            span.name_str(),
-            duration,
-            status,
-        );
+        let desc = describe_span(span.name_str());
+        if desc.is_empty() {
+            println!(
+                "{}[{}] {} ({} cycles) {}",
+                indent,
+                span.module_str(),
+                span.name_str(),
+                duration,
+                status,
+            );
+        } else {
+            println!(
+                "{}[{}] {} ({} cycles) {} {}",
+                indent,
+                span.module_str(),
+                span.name_str(),
+                duration,
+                status,
+                desc,
+            );
+        }
     }
+}
+
+/// Clears the trace buffer, executes a command, then displays the resulting trace tree.
+fn trace_follow(args: &[&str]) {
+    if args.is_empty() {
+        println!("Usage: trace follow <command> [args...]");
+        return;
+    }
+
+    minios_trace::TRACER.clear();
+
+    let cmd_name = args[0];
+    let cmd_args = if args.len() > 1 { &args[1..] } else { &[] };
+    match super::find_command(cmd_name) {
+        Some(command) => (command.handler)(cmd_args),
+        None => {
+            println!("trace follow: unknown command '{}'", cmd_name);
+            return;
+        }
+    }
+
+    println!("--- Trace for '{}' ---", cmd_name);
+    let mut buf: [minios_trace::Span; 32] = core::array::from_fn(|_| minios_trace::Span::default());
+    let n = minios_trace::TRACER.read_recent(32, &mut buf);
+    for span in &buf[..n] {
+        let indent = "  ".repeat(span.depth as usize);
+        let duration = span.end_tsc.saturating_sub(span.start_tsc);
+        let desc = describe_span(span.name_str());
+        if desc.is_empty() {
+            println!(
+                "{}[{}] {}  {} cycles",
+                indent,
+                span.module_str(),
+                span.name_str(),
+                duration,
+            );
+        } else {
+            println!(
+                "{}[{}] {}  {} cycles  {}",
+                indent,
+                span.module_str(),
+                span.name_str(),
+                duration,
+                desc,
+            );
+        }
+    }
+    println!("--- {} spans ---", n);
 }
 
 /// Shows trace buffer statistics.
