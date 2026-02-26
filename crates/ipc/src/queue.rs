@@ -165,4 +165,62 @@ mod tests {
         assert_eq!(msg.data[0], 42);
         assert_eq!(msg.data[MAX_MSG_DATA - 1], 42);
     }
+
+    #[test]
+    fn message_clone_preserves_data() {
+        let msg = Message::new(Pid(5), 99, b"payload");
+        let copy = msg.clone();
+        assert_eq!(copy.sender, Pid(5));
+        assert_eq!(copy.msg_type, 99);
+        assert_eq!(copy.data_len, 7);
+        assert_eq!(&copy.data[..copy.data_len], b"payload");
+    }
+
+    #[test]
+    fn queue_capacity_boundary() {
+        let mut q = MessageQueue::new(1);
+        assert!(q.send(Message::new(Pid(0), 0, b"a")).is_ok());
+        assert!(matches!(
+            q.send(Message::new(Pid(0), 0, b"b")),
+            Err(IpcError::QueueFull)
+        ));
+        assert_eq!(q.len(), 1);
+    }
+
+    #[test]
+    fn send_after_receive_frees_space() {
+        let mut q = MessageQueue::new(2);
+        q.send(Message::new(Pid(0), 0, b"a")).unwrap();
+        q.send(Message::new(Pid(0), 0, b"b")).unwrap();
+        assert!(q.send(Message::new(Pid(0), 0, b"c")).is_err());
+        q.receive().unwrap();
+        assert!(q.send(Message::new(Pid(0), 0, b"c")).is_ok());
+        assert_eq!(q.len(), 2);
+    }
+
+    #[test]
+    fn is_empty_and_len() {
+        let mut q = MessageQueue::new(4);
+        assert!(q.is_empty());
+        assert_eq!(q.len(), 0);
+        q.send(Message::new(Pid(0), 0, b"x")).unwrap();
+        assert!(!q.is_empty());
+        assert_eq!(q.len(), 1);
+    }
+
+    #[test]
+    fn message_with_trace_context() {
+        use minios_common::id::{SpanId, TraceId};
+        use minios_common::types::TraceContext;
+
+        let ctx = TraceContext {
+            trace_id: TraceId(42),
+            current_span_id: SpanId(7),
+            depth: 1,
+        };
+        let msg = Message::with_trace(Pid(1), 10, b"hi", ctx);
+        assert!(msg.trace_context.is_some());
+        let tc = msg.trace_context.unwrap();
+        assert_eq!(tc.trace_id, TraceId(42));
+    }
 }
