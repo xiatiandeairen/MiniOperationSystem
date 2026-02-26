@@ -91,6 +91,14 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     boot_progress("Process manager initialized");
 
+    let stats = minios_memory::get_stats();
+    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::GREEN);
+    minios_hal::println!(
+        "  MiniOS v1.0-rc | x86-64 | {} KiB RAM",
+        stats.total_frames * 4
+    );
+    minios_hal::println!("  Type 'tutorial' to start learning");
+    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
     minios_hal::println!("Boot successful. System ready.");
 
     minios_hal::interrupts::set_timer_callback(on_timer_tick);
