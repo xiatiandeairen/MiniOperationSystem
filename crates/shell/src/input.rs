@@ -19,11 +19,12 @@ impl LineBuffer {
     }
 
     /// Appends a printable ASCII character if space remains.
-    pub fn push(&mut self, ch: u8) {
-        if self.len < MAX_LINE_LEN {
-            self.buf[self.len] = ch;
-            self.len += 1;
+    pub fn push(&mut self, byte: u8) {
+        if self.len >= self.buf.len() - 1 {
+            return;
         }
+        self.buf[self.len] = byte;
+        self.len += 1;
     }
 
     /// Removes the last character (backspace behaviour).

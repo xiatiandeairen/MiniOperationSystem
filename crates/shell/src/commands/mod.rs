@@ -2,9 +2,11 @@
 
 pub mod alias;
 pub mod basic;
+pub mod bench;
 pub mod compare;
 pub mod crash;
 pub mod env_cmds;
+pub mod errors;
 pub mod explain;
 pub mod fs_cmds;
 pub mod journey;
@@ -234,6 +236,16 @@ static COMMANDS: &[Command] = &[
         name: "graduation",
         description: "Show learning completion report",
         handler: journey::cmd_graduation,
+    },
+    Command {
+        name: "top",
+        description: "Show system-wide status snapshot (processes, memory, IRQs)",
+        handler: proc_cmds::cmd_top,
+    },
+    Command {
+        name: "bench",
+        description: "Run built-in performance benchmarks (alloc, trace, fs)",
+        handler: bench::cmd_bench,
     },
 ];
 

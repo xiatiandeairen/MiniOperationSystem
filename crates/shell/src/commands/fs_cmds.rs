@@ -40,7 +40,10 @@ pub fn cmd_ls(args: &[&str]) {
                 println!("  {} {:>6}  {}", type_char, size, name);
             }
         }
-        Err(e) => println!("ls: {}: {}", path, e),
+        Err(e) => {
+            let msg = alloc::format!("{}: {}", path, e);
+            super::errors::show_error("ls", &msg);
+        }
     }
     super::journey::mark(super::journey::STEP_LS);
 }
@@ -84,7 +87,10 @@ pub fn cmd_cat(args: &[&str]) {
                 super::journey::mark(super::journey::STEP_CAT_PROC);
             }
         }
-        Err(e) => println!("cat: {}: {}", path, e),
+        Err(e) => {
+            let msg = alloc::format!("{}: {}", path, e);
+            super::errors::show_error("cat", &msg);
+        }
     }
 }
 
@@ -105,7 +111,8 @@ pub fn cmd_mkdir(args: &[&str]) {
     };
 
     if let Err(e) = vfs.mkdir(args[0]) {
-        println!("mkdir: {}: {}", args[0], e);
+        let msg = alloc::format!("{}: {}", args[0], e);
+        super::errors::show_error("mkdir", &msg);
     }
 }
 
