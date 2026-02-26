@@ -367,10 +367,7 @@ mod tests {
     #[test]
     fn display_all_ipc_error_variants() {
         assert_eq!(format!("{}", IpcError::QueueNotFound), "queue not found");
-        assert_eq!(
-            format!("{}", IpcError::InvalidMessage),
-            "invalid message"
-        );
+        assert_eq!(format!("{}", IpcError::InvalidMessage), "invalid message");
     }
 
     #[test]
@@ -383,9 +380,6 @@ mod tests {
     #[test]
     fn process_error_equality() {
         assert_eq!(ProcessError::InvalidPid, ProcessError::InvalidPid);
-        assert_ne!(
-            ProcessError::MaxProcessesReached,
-            ProcessError::InvalidPid
-        );
+        assert_ne!(ProcessError::MaxProcessesReached, ProcessError::InvalidPid);
     }
 }
