@@ -64,7 +64,14 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     let _boot_span = trace_span!("kernel_boot", module = "boot");
 
-    minios_hal::println!("Hello, MiniOS!");
+    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::GREEN);
+    minios_hal::println!("  __  __ _       _  ___  ____");
+    minios_hal::println!(" |  \\/  (_)_ __ (_)/ _ \\/ ___|");
+    minios_hal::println!(" | |\\/| | | '_ \\| | | | \\___ \\");
+    minios_hal::println!(" | |  | | | | | | | |_| |___) |");
+    minios_hal::println!(" |_|  |_|_|_| |_|_|\\___/|____/");
+    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
+    minios_hal::println!();
 
     let mem = {
         let _mem_span = trace_span!("memory_init", module = "memory");
