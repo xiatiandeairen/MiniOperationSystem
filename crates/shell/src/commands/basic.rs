@@ -23,9 +23,13 @@ pub fn cmd_echo(args: &[&str]) {
     println!();
 }
 
-/// Clears the VGA screen.
+/// Clears the screen.
 pub fn cmd_clear(_args: &[&str]) {
-    minios_hal::vga::clear_screen();
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        if let Some(ref mut console) = *minios_hal::framebuffer::CONSOLE.lock() {
+            console.clear();
+        }
+    });
 }
 
 /// Shows the number of timer ticks since boot.
@@ -37,17 +41,15 @@ pub fn cmd_uptime(_args: &[&str]) {
 
 /// Displays memory statistics (frame allocator + heap).
 pub fn cmd_meminfo(_args: &[&str]) {
-    let mem = minios_memory::MEMORY_STATS.lock();
-    if let Some(ref stats) = *mem {
-        println!(
-            "Frames: {} free / {} total",
-            stats.free_frames, stats.total_frames
-        );
-        println!(
-            "Heap:   {} used / {} free",
-            stats.heap_used, stats.heap_free
-        );
-    } else {
-        println!("Memory stats not available");
-    }
+    let stats = minios_memory::get_stats();
+    println!(
+        "Frames: {} free / {} total ({} KiB free)",
+        stats.free_frames,
+        stats.total_frames,
+        stats.free_frames * 4,
+    );
+    println!(
+        "Heap:   {} used / {} free",
+        stats.heap_used, stats.heap_free
+    );
 }
