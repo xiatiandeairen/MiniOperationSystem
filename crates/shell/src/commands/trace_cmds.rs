@@ -191,7 +191,15 @@ fn trace_export() {
         return;
     }
     println!("Exporting {} spans to serial port...", n);
+
+    minios_hal::serial_println!("---TRACE-BEGIN---");
+    minios_hal::serial_print!("{{\"format\":\"minios-trace-v1\",\"spans\":");
     let mut writer = minios_trace::export::SerialJsonWriter;
     let _ = minios_trace::export::export_json(&mut writer, &buf[..n]);
-    println!("Export complete. Capture serial output to load in trace-viewer.");
+    minios_hal::serial_println!("}}");
+    minios_hal::serial_println!("---TRACE-END---");
+
+    println!("Export complete.");
+    println!("Capture with: cargo make run-trace");
+    println!("Then load trace-output.log in trace-viewer.");
 }
