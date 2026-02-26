@@ -15,52 +15,87 @@
 2. **ROI值得吗?** — 投入的时间与可见产出是否匹配?
 3. **可回滚吗?** — 每个commit是否独立可回滚，不引入不可逆变更?
 
-### 迭代节奏
-- 每轮迭代 = 1个需求(30-60分钟)
-- 每轮结束: commit + push + 更新任务文档
-- 每3轮: 同步到main分支
-- 每次同步main: 自评打分 + 优化流程
-
-### 失败处理
-- 验证失败: 最多重试3次
-- 3次后: `git stash` 保存现场 → 记录到 `docs/tasks/` 失败原因 → 开始下个需求
-- 禁止: 在失败的路上继续投入超过3次尝试的时间
-
 ### Commit 纪律
 - 每个commit可独立回滚，不破坏前后commit
-- commit前必须: `cargo build` + `cargo clippy` + `cargo fmt --check`
+- commit前必须: `cargo build` + `cargo clippy -- -D warnings` + `cargo fmt --check`
 - commit message: `<type>(<scope>): <解决了什么问题>`
 
-## 文档归档
+## 版本发布流程（每版本必须执行）
 
-### 三文档闭环
+### 发布前质量门禁
+运行 `./scripts/release-check.sh vX.Y.Z`，全部通过才能打 tag：
+
 ```
-docs/tasks/ITER-NNN-plan.md      ← AI自己写: 本轮要做什么，为什么做
-docs/tasks/ITER-NNN-result.md    ← AI执行后: 做了什么，风险点，打分
-docs/feedback/ITER-NNN.md        ← 人类验收后: 建议 → 沉淀到本文件
+--- Code Quality ---
+  ✅ cargo fmt
+  ✅ cargo clippy (0 warnings)
+  ✅ debug build
+  ✅ release build
+--- Tests ---
+  ✅ unit tests (>=59)
+--- Documentation ---
+  ✅ release notes (docs/releases/vX.Y.Z.md)
+  ✅ changelog (docs/changelogs/vX.Y.Z-changelog.md)
+  ✅ tasks (docs/dev-logs/vX.Y.Z-tasks.md)
+  ✅ insights (docs/dev-logs/vX.Y.Z-insights.md)
+--- Boot Image ---
+  ✅ boot-image tool built
+  ✅ kernel ELF exists
 ```
 
-### 归档原则
-- 每份文档可独立阅读，不依赖上下文
-- 记录决策原因（为什么做/不做），不只记录结果
-- 风险点必须有处置方案（接受/规避/转移）
+### 发布文档 checklist（每版本 4 个文件）
+1. `docs/releases/vX.Y.Z.md` — 精华特性（面向用户）
+2. `docs/changelogs/vX.Y.Z-changelog.md` — 全部变更（面向开发者）
+3. `docs/dev-logs/vX.Y.Z-tasks.md` — AI Coding 任务 ✅/❌ 清单
+4. `docs/dev-logs/vX.Y.Z-insights.md` — 代码量/功能数/ROI/关键学习
 
-## 评分标准（每轮自评）
+### 发布步骤
+```bash
+./scripts/release-check.sh vX.Y.Z          # 质量门禁
+git checkout main && git merge dev-branch   # 合入 main
+git tag -a vX.Y.Z -m "vX.Y.Z — Codename"  # 打 tag
+git push origin main --tags                 # 推送
+gh release create vX.Y.Z --notes-file ...  # 创建 GitHub Release
+```
 
-| 维度 | 权重 | 行业优秀 | 说明 |
-|------|------|---------|------|
-| 功能正确性 | 25% | >95% | 验收标准满足率 |
-| 代码质量 | 20% | CC<10, 0 clippy | 复杂度、lint、命名 |
-| 测试覆盖 | 15% | >80% | 关键路径测试覆盖 |
-| 文档完整 | 10% | >90% API doc | rustdoc + 注释 |
-| 架构一致性 | 15% | 0 违反 | trait边界、依赖方向 |
-| 交付效率 | 15% | <10% 返工 | 一次通过率 |
+## CI 规则 (GitHub Actions)
 
-## 项目目标
-帮助开发者理解操作系统运行机制和设计思想，降低噪音信息理解成本。
+每次 push/PR 自动运行:
+1. `cargo fmt --check` — 格式
+2. `cargo clippy -- -D warnings` — lint（零警告）
+3. `cargo build` — debug + release 双构建
+4. `cargo test` — 单元测试（≥59 个，回归保护）
+5. 项目指标输出到 Summary（源文件数/代码行数/Shell 命令数）
+
+## 文档归档规则
+
+### 每版本必须归档的 4 个文件
+| 文件 | 内容 | 模板 |
+|------|------|------|
+| `releases/vX.Y.Z.md` | 精华特性 + 数字摘要 | 版本概览 → 新增特性 → 数字摘要 |
+| `changelogs/vX.Y.Z-changelog.md` | 全部 commit 按类型分组 | feat/fix/test/docs |
+| `dev-logs/vX.Y.Z-tasks.md` | 任务 ✅/❌ 清单 + 完成率 | 按 Feature 分组 |
+| `dev-logs/vX.Y.Z-insights.md` | 代码变更/ROI/关键学习 | 数据表 + ROI 星级 |
+
+### 问题追踪
+通过 GitHub Issues 管理，标签: `risk`, `decision`, `bug`, `enhancement`
+
+## 评分标准
+
+| 维度 | 权重 | 行业优秀 |
+|------|------|---------|
+| 功能正确性 | 25% | >95% |
+| 代码质量 | 20% | CC<10, 0 clippy |
+| 测试覆盖 | 15% | >80% |
+| 文档完整 | 10% | >90% API doc |
+| 架构一致性 | 15% | 0 违反 |
+| 交付效率 | 15% | <10% 返工 |
 
 ## 沉淀的规则
 1. 保持简洁快速节奏，避免引入复杂度
 2. 每个功能必须端到端可验证（不只是编译通过）
-3. 帧缓冲文本渲染是用户体验的关键路径，优先级高
-4. 串口输入是 headless 测试的前提
+3. ISR 中绝不能获取 Mutex（trace_event/serial_println 都会死锁）
+4. framebuffer 颜色用 BGR 顺序
+5. crash 命令不能真正 panic（90% 水位停止）
+6. cmd_run 必须释放 VFS 锁后再执行命令（否则 FS 命令死锁）
+7. 每次改动调度/中断代码后必须 QEMU GUI 验证 Shell 交互

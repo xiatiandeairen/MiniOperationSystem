@@ -16,16 +16,22 @@ jobs:
       - name: Format check
         run: cargo fmt --all --check
 
-      - name: Clippy
+      - name: Clippy (zero warnings)
         run: >
           cargo clippy --workspace
           -Z build-std=core,compiler_builtins,alloc
           -Z build-std-features=compiler-builtins-mem
           -- -D warnings
 
-      - name: Build
+      - name: Build (debug)
         run: >
           cargo build --workspace
+          -Z build-std=core,compiler_builtins,alloc
+          -Z build-std-features=compiler-builtins-mem
+
+      - name: Build (release)
+        run: >
+          cargo build --workspace --release
           -Z build-std=core,compiler_builtins,alloc
           -Z build-std-features=compiler-builtins-mem
 
@@ -38,3 +44,24 @@ jobs:
           -p minios-scheduler
           -p minios-ipc
           --target x86_64-unknown-linux-gnu
+
+      - name: Test count guard
+        run: |
+          COUNT=$(cargo test -p minios-common -p minios-trace -p minios-scheduler -p minios-ipc --target x86_64-unknown-linux-gnu 2>&1 | grep -oP '\d+ passed' | awk '{s+=$1} END {print s}')
+          echo "Tests passed: $COUNT"
+          if [ "$COUNT" -lt 59 ]; then
+            echo "::error::Test count regression! Expected >=59, got $COUNT"
+            exit 1
+          fi
+
+      - name: Project metrics
+        run: |
+          echo "## Project Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          FILES=$(find crates -name '*.rs' | wc -l)
+          LINES=$(find crates -name '*.rs' -exec cat {} + | wc -l)
+          CMDS=$(grep -c 'Command {' crates/shell/src/commands/mod.rs)
+          echo "| Source files | $FILES |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lines of code | $LINES |" >> $GITHUB_STEP_SUMMARY
+          echo "| Shell commands | $CMDS |" >> $GITHUB_STEP_SUMMARY
