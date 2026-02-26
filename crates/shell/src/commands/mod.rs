@@ -294,6 +294,11 @@ static COMMANDS: &[Command] = &[
         description: "OS knowledge quiz (process, memory, fs)",
         handler: quiz::cmd_quiz,
     },
+    Command {
+        name: "challenge",
+        description: "Verifiable learning challenges (create-file, find-pid, memory-check)",
+        handler: quiz::cmd_challenge,
+    },
 ];
 
 /// Finds a command by name.
