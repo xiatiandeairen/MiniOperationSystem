@@ -415,20 +415,20 @@ pub fn cmd_export_session(_args: &[&str]) {
 
 /// Prints a quick reference card of all MiniOS command categories.
 pub fn cmd_cheatsheet(_args: &[&str]) {
-    println!("\u{2554}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2557}");
-    println!("\u{2551}     MiniOS Quick Reference Card       \u{2551}");
-    println!("\u{2560}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2563}");
-    println!("\u{2551} LEARN    tutorial explain compare lab \u{2551}");
-    println!("\u{2551} PROCESS  ps spawn kill signal sched   \u{2551}");
-    println!("\u{2551} MEMORY   meminfo frames pagetable     \u{2551}");
-    println!("\u{2551} FILES    ls cat mkdir write touch rm   \u{2551}");
-    println!("\u{2551} TRACE    trace follow/tree/filter/log  \u{2551}");
-    println!("\u{2551} TEST     crash lab bench               \u{2551}");
-    println!("\u{2551} SCRIPT   run each repeat alias history \u{2551}");
-    println!("\u{2551} TEXT     head grep wc                   \u{2551}");
-    println!("\u{2551} STATUS   top uptime interrupts version \u{2551}");
-    println!("\u{2551} HELP     help man explain cheatsheet   \u{2551}");
-    println!("\u{255a}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{255d}");
+    println!("+---------------------------------------+");
+    println!("|     MiniOS Quick Reference Card       |");
+    println!("+---------------------------------------+");
+    println!("| LEARN    tutorial explain compare lab |");
+    println!("| PROCESS  ps spawn kill signal sched   |");
+    println!("| MEMORY   meminfo frames pagetable     |");
+    println!("| FILES    ls cat mkdir write touch rm   |");
+    println!("| TRACE    trace follow/tree/filter/log  |");
+    println!("| TEST     crash lab bench               |");
+    println!("| SCRIPT   run each repeat alias history |");
+    println!("| TEXT     head grep wc                   |");
+    println!("| STATUS   top uptime interrupts version |");
+    println!("| HELP     help man explain cheatsheet   |");
+    println!("+---------------------------------------+");
 }
 
 /// Prints a structured course outline for using MiniOS as a teaching tool.
