@@ -2,6 +2,7 @@
 
 pub mod basic;
 pub mod compare;
+pub mod crash;
 pub mod env_cmds;
 pub mod explain;
 pub mod fs_cmds;
@@ -146,6 +147,16 @@ static COMMANDS: &[Command] = &[
         name: "lab",
         description: "Run interactive OS learning experiments",
         handler: lab::cmd_lab,
+    },
+    Command {
+        name: "crash",
+        description: "Safe fault experiments (oom|stack|divide-zero|null|fork-bomb)",
+        handler: crash::cmd_crash,
+    },
+    Command {
+        name: "run",
+        description: "Execute commands from a script file",
+        handler: basic::cmd_run,
     },
     Command {
         name: "history",
