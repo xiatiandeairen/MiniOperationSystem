@@ -39,6 +39,16 @@ pub fn init() -> Vfs {
         .expect("failed to write /etc/motd");
     vfs.close(fd).expect("failed to close /etc/motd");
 
+    let init_fd = vfs
+        .open("/etc/init.sh", OpenFlags::CREATE | OpenFlags::WRITE)
+        .expect("failed to create /etc/init.sh");
+    vfs.write(
+        init_fd,
+        b"# MiniOS init script\necho MiniOS initialized successfully.\n",
+    )
+    .expect("failed to write /etc/init.sh");
+    vfs.close(init_fd).expect("failed to close /etc/init.sh");
+
     vfs
 }
 
