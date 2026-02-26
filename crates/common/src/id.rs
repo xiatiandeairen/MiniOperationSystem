@@ -61,12 +61,14 @@ impl Default for PidAllocator {
 }
 
 impl PidAllocator {
+    /// Creates a new allocator starting from PID 0.
     pub const fn new() -> Self {
         Self {
             next: AtomicU32::new(0),
         }
     }
 
+    /// Returns the next unique PID.
     pub fn allocate(&self) -> Pid {
         Pid(self.next.fetch_add(1, Ordering::Relaxed))
     }
@@ -84,12 +86,14 @@ impl Default for SpanIdGenerator {
 }
 
 impl SpanIdGenerator {
+    /// Creates a new generator starting from span ID 1.
     pub const fn new() -> Self {
         Self {
             next: AtomicU64::new(1),
         }
     }
 
+    /// Returns the next unique span ID.
     pub fn next(&self) -> SpanId {
         SpanId(self.next.fetch_add(1, Ordering::Relaxed))
     }
@@ -107,12 +111,14 @@ impl Default for TraceIdGenerator {
 }
 
 impl TraceIdGenerator {
+    /// Creates a new generator starting from trace ID 1.
     pub const fn new() -> Self {
         Self {
             next: AtomicU64::new(1),
         }
     }
 
+    /// Returns the next unique trace ID.
     pub fn next(&self) -> TraceId {
         TraceId(self.next.fetch_add(1, Ordering::Relaxed))
     }
