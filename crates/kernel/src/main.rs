@@ -99,15 +99,15 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         init_filesystem();
     }
 
-    {
-        let _syscall_span = trace_span!("syscall_test", module = "syscall");
-        test_syscalls();
-    }
-
-    {
-        let _ipc_span = trace_span!("ipc_test", module = "ipc");
-        test_ipc();
-    }
+    // Boot-time smoke tests (uncomment for debugging):
+    // {
+    //     let _syscall_span = trace_span!("syscall_test", module = "syscall");
+    //     test_syscalls();
+    // }
+    // {
+    //     let _ipc_span = trace_span!("ipc_test", module = "ipc");
+    //     test_ipc();
+    // }
 
     {
         let _proc_span = trace_span!("process_init", module = "process");
@@ -199,7 +199,7 @@ fn print_process_list() {
 /// No trace spans here: the timer ISR fires while the main thread may
 /// hold the trace buffer Mutex, so calling trace_event! would deadlock.
 fn on_timer_tick() {
-    let ticks = minios_hal::interrupts::tick_count();
+    let _ticks = minios_hal::interrupts::tick_count();
     let current = minios_process::manager::current_pid();
     minios_process::manager::tick_cpu_time(current);
 
@@ -213,20 +213,8 @@ fn on_timer_tick() {
         ScheduleDecision::Idle => {}
     }
 
-    if ticks > 0 && ticks.is_multiple_of(50) {
-        minios_hal::serial_println!("tick {} | current PID {}", ticks, current);
-    }
-
-    if ticks == 200 {
-        print_process_list();
-        let stats = minios_scheduler::SCHEDULER.lock().stats();
-        minios_hal::serial_println!(
-            "Scheduler stats: switches={}, ticks={}, idle={}",
-            stats.total_switches,
-            stats.total_ticks,
-            stats.idle_ticks
-        );
-    }
+    // Removed: noisy tick logging during normal operation
+    // Scheduler stats are available via 'sched' and 'cat /proc/scheduler' commands
 }
 
 /// Records a scheduling decision without performing a real context switch.
@@ -285,6 +273,7 @@ fn init_task() {
 }
 
 /// Smoke-tests the syscall dispatcher with uptime and getpid calls.
+#[allow(dead_code)]
 fn test_syscalls() {
     let uptime = minios_syscall::dispatch(minios_syscall::SYS_UPTIME, 0, 0, 0);
     minios_hal::serial_println!("Uptime via syscall: {} ticks", uptime);
@@ -308,6 +297,7 @@ fn test_syscalls() {
 }
 
 /// Smoke-tests the IPC message queue: create, send, receive, destroy.
+#[allow(dead_code)]
 fn test_ipc() {
     use minios_common::id::Pid;
 
