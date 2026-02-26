@@ -7,6 +7,8 @@ use crate::fd::FdTable;
 use crate::procfs;
 use crate::ramfs::RamFs;
 
+use minios_common::traits::trace::Tracer;
+
 use alloc::string::String;
 use alloc::vec::Vec;
 
@@ -132,6 +134,7 @@ impl Vfs {
 
 impl FileSystem for Vfs {
     fn open(&self, path: &str, flags: OpenFlags) -> Result<FileDescriptor, FsError> {
+        let _span = minios_trace::trace_span!("vfs_open", module = "fs");
         if path.starts_with("/proc/") {
             return self.open_procfs(path);
         }
@@ -147,10 +150,12 @@ impl FileSystem for Vfs {
     }
 
     fn close(&self, fd: FileDescriptor) -> Result<(), FsError> {
+        let _span = minios_trace::trace_span!("vfs_close", module = "fs");
         self.fd_table.lock().release(fd)
     }
 
     fn read(&self, fd: FileDescriptor, buf: &mut [u8]) -> Result<usize, FsError> {
+        let _span = minios_trace::trace_span!("vfs_read", module = "fs");
         let (is_virtual, inode, offset) = self.fd_table.lock().get_info(fd)?;
         if is_virtual {
             return self.fd_table.lock().read_virtual(fd, buf);
@@ -159,6 +164,7 @@ impl FileSystem for Vfs {
     }
 
     fn write(&self, fd: FileDescriptor, buf: &[u8]) -> Result<usize, FsError> {
+        let _span = minios_trace::trace_span!("vfs_write", module = "fs");
         let (is_virtual, inode, offset) = self.fd_table.lock().get_info(fd)?;
         if is_virtual {
             return Err(FsError::PermissionDenied);
@@ -167,6 +173,7 @@ impl FileSystem for Vfs {
     }
 
     fn seek(&self, fd: FileDescriptor, offset: i64, whence: SeekWhence) -> Result<u64, FsError> {
+        let _span = minios_trace::trace_span!("vfs_seek", module = "fs");
         let (is_virtual, inode, current) = self.fd_table.lock().get_info(fd)?;
         let size = if is_virtual {
             self.fd_table.lock().virtual_data_len(fd)?
@@ -179,22 +186,26 @@ impl FileSystem for Vfs {
     }
 
     fn mkdir(&self, path: &str) -> Result<(), FsError> {
+        let _span = minios_trace::trace_span!("vfs_mkdir", module = "fs");
         let (parent, name) = self.resolve_parent(path)?;
         self.driver.create_dir(parent, name)?;
         Ok(())
     }
 
     fn rmdir(&self, path: &str) -> Result<(), FsError> {
+        let _span = minios_trace::trace_span!("vfs_rmdir", module = "fs");
         let (parent, name) = self.resolve_parent(path)?;
         self.driver.remove(parent, name)
     }
 
     fn unlink(&self, path: &str) -> Result<(), FsError> {
+        let _span = minios_trace::trace_span!("vfs_unlink", module = "fs");
         let (parent, name) = self.resolve_parent(path)?;
         self.driver.remove(parent, name)
     }
 
     fn stat(&self, path: &str) -> Result<FileStat, FsError> {
+        let _span = minios_trace::trace_span!("vfs_stat", module = "fs");
         if path.starts_with("/proc/") {
             return procfs::stat_procfs(path);
         }
