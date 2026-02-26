@@ -2,7 +2,12 @@
 
 extern crate alloc;
 
+use core::sync::atomic::{AtomicU64, Ordering};
 use minios_hal::{println, serial_println};
+
+static SNAPSHOT_FRAMES: AtomicU64 = AtomicU64::new(0);
+static SNAPSHOT_HEAP: AtomicU64 = AtomicU64::new(0);
+static SNAPSHOT_TICK: AtomicU64 = AtomicU64::new(0);
 
 /// Lists all available commands with descriptions.
 pub fn cmd_help(_args: &[&str]) {
@@ -177,6 +182,42 @@ pub fn cmd_debug(args: &[&str]) {
             println!("Debug mode OFF — normal logging (level=INFO)");
         }
         _ => println!("Usage: debug <on|off|status>"),
+    }
+}
+
+/// Saves or diffs a system state snapshot for comparison over time.
+pub fn cmd_snapshot(args: &[&str]) {
+    if args.is_empty() || args[0] == "save" {
+        let stats = minios_memory::get_stats();
+        let tick = minios_hal::interrupts::tick_count();
+        SNAPSHOT_FRAMES.store(stats.free_frames as u64, Ordering::Relaxed);
+        SNAPSHOT_HEAP.store(stats.heap_used as u64, Ordering::Relaxed);
+        SNAPSHOT_TICK.store(tick, Ordering::Relaxed);
+        println!("Snapshot saved at tick {}", tick);
+    } else if args[0] == "diff" {
+        let old_frames = SNAPSHOT_FRAMES.load(Ordering::Relaxed);
+        let old_heap = SNAPSHOT_HEAP.load(Ordering::Relaxed);
+        let old_tick = SNAPSHOT_TICK.load(Ordering::Relaxed);
+        if old_tick == 0 {
+            println!("No snapshot saved. Use 'snapshot save' first.");
+            return;
+        }
+        let stats = minios_memory::get_stats();
+        let tick = minios_hal::interrupts::tick_count();
+        println!("=== State Diff (tick {} \u{2192} {}) ===", old_tick, tick);
+        let frame_diff = stats.free_frames as i64 - old_frames as i64;
+        let heap_diff = stats.heap_used as i64 - old_heap as i64;
+        println!(
+            "  Frames free: {} \u{2192} {} ({:+})",
+            old_frames, stats.free_frames, frame_diff
+        );
+        println!(
+            "  Heap used:   {} \u{2192} {} ({:+})",
+            old_heap, stats.heap_used, heap_diff
+        );
+        println!("  Ticks elapsed: {}", tick - old_tick);
+    } else {
+        println!("Usage: snapshot [save|diff]");
     }
 }
 

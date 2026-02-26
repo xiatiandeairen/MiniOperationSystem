@@ -273,6 +273,11 @@ static COMMANDS: &[Command] = &[
         description: "Quick usage reference for a command",
         handler: man::cmd_man,
     },
+    Command {
+        name: "snapshot",
+        description: "Save or diff system state snapshots",
+        handler: basic::cmd_snapshot,
+    },
 ];
 
 /// Finds a command by name.
