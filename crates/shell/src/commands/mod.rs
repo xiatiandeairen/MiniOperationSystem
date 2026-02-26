@@ -2,7 +2,9 @@
 
 pub mod basic;
 pub mod fs_cmds;
+pub mod mem_cmds;
 pub mod proc_cmds;
+pub mod sched_cmds;
 pub mod trace_cmds;
 
 /// A shell command with its name, description, and handler function.
@@ -75,9 +77,44 @@ static COMMANDS: &[Command] = &[
         handler: proc_cmds::cmd_ps,
     },
     Command {
+        name: "spawn",
+        description: "Spawn a background kernel task",
+        handler: sched_cmds::cmd_spawn,
+    },
+    Command {
+        name: "kill",
+        description: "Terminate a process by PID",
+        handler: sched_cmds::cmd_kill,
+    },
+    Command {
+        name: "sched",
+        description: "Show scheduler queue stats",
+        handler: sched_cmds::cmd_sched,
+    },
+    Command {
+        name: "nice",
+        description: "Change process priority",
+        handler: sched_cmds::cmd_nice,
+    },
+    Command {
         name: "trace",
-        description: "Trace subsystem (list|stats|clear|export)",
+        description: "Trace subsystem (list|tree|stats|clear|export|follow)",
         handler: trace_cmds::cmd_trace,
+    },
+    Command {
+        name: "pagetable",
+        description: "Decompose virtual address into page table indices",
+        handler: mem_cmds::cmd_pagetable,
+    },
+    Command {
+        name: "frames",
+        description: "Show physical frame usage with visual bar",
+        handler: mem_cmds::cmd_frames,
+    },
+    Command {
+        name: "alloc",
+        description: "Allocate heap memory and show result",
+        handler: mem_cmds::cmd_alloc,
     },
 ];
 

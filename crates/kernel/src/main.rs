@@ -195,8 +195,10 @@ fn print_process_list() {
 }
 
 /// Timer tick callback — drives the scheduler.
+///
+/// No trace spans here: the timer ISR fires while the main thread may
+/// hold the trace buffer Mutex, so calling trace_event! would deadlock.
 fn on_timer_tick() {
-    trace_event!("timer_tick");
     let ticks = minios_hal::interrupts::tick_count();
     let current = minios_process::manager::current_pid();
     minios_process::manager::tick_cpu_time(current);
