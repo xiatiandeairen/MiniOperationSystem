@@ -178,3 +178,13 @@ pub fn cmd_write(args: &[&str]) {
 pub fn cmd_pwd(_args: &[&str]) {
     println!("{}", CWD);
 }
+
+/// Shows RamFS storage statistics.
+pub fn cmd_df(_args: &[&str]) {
+    let vfs = minios_fs::VFS.lock();
+    if let Some(vfs) = vfs.as_ref() {
+        let (inodes, bytes, dirs) = vfs.storage_stats();
+        println!("Filesystem    Inodes  Data    Dirs");
+        println!("ramfs         {:>6}  {:>5}B  {:>4}", inodes, bytes, dirs);
+    }
+}

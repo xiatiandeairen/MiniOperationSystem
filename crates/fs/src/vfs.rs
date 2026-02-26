@@ -130,6 +130,11 @@ impl Vfs {
         let inode = self.resolve_path(path)?;
         self.driver.list_dir(inode)
     }
+
+    /// Returns RamFS storage statistics (inodes, bytes, dirs).
+    pub fn storage_stats(&self) -> (usize, usize, usize) {
+        self.driver.storage_stats()
+    }
 }
 
 impl FileSystem for Vfs {

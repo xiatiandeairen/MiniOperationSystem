@@ -309,6 +309,11 @@ static COMMANDS: &[Command] = &[
         description: "Quick reference card of all command categories",
         handler: basic::cmd_cheatsheet,
     },
+    Command {
+        name: "df",
+        description: "Show RamFS storage statistics",
+        handler: fs_cmds::cmd_df,
+    },
 ];
 
 /// Finds a command by name.
