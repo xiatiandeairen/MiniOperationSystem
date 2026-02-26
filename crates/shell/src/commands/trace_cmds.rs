@@ -11,7 +11,8 @@ pub fn cmd_trace(args: &[&str]) {
         "list" => trace_list(),
         "stats" => trace_stats(),
         "clear" => trace_clear(),
-        _ => println!("Usage: trace <list|stats|clear>"),
+        "export" => trace_export(),
+        _ => println!("Usage: trace <list|stats|clear|export>"),
     }
 }
 
@@ -56,4 +57,21 @@ fn trace_stats() {
 fn trace_clear() {
     minios_trace::TRACER.clear();
     println!("Trace buffer cleared.");
+}
+
+/// Exports the trace buffer as JSON to the serial port.
+///
+/// The output can be captured with: `cargo make run-trace`
+/// then loaded in the trace-viewer web tool.
+fn trace_export() {
+    let mut buf: [minios_trace::Span; 64] = core::array::from_fn(|_| minios_trace::Span::default());
+    let n = minios_trace::TRACER.read_recent(64, &mut buf);
+    if n == 0 {
+        println!("No spans to export.");
+        return;
+    }
+    println!("Exporting {} spans to serial port...", n);
+    let mut writer = minios_trace::export::SerialJsonWriter;
+    let _ = minios_trace::export::export_json(&mut writer, &buf[..n]);
+    println!("Export complete. Capture serial output to load in trace-viewer.");
 }
