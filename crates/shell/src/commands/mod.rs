@@ -247,6 +247,11 @@ static COMMANDS: &[Command] = &[
         description: "Run built-in performance benchmarks (alloc, trace, fs)",
         handler: bench::cmd_bench,
     },
+    Command {
+        name: "memmap",
+        description: "Show ASCII memory layout diagram",
+        handler: mem_cmds::cmd_memmap,
+    },
 ];
 
 /// Finds a command by name.

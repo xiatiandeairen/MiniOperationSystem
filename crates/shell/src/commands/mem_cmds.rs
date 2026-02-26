@@ -87,6 +87,36 @@ pub fn cmd_alloc(args: &[&str]) {
     }
 }
 
+/// Prints an ASCII diagram of the x86-64 virtual memory layout plus stats.
+pub fn cmd_memmap(_args: &[&str]) {
+    let stats = minios_memory::get_stats();
+    println!("=== Memory Layout (x86-64) ===");
+    println!();
+    println!("  0xFFFF_FFFF_FFFF_FFFF \u{250c}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2510}");
+    println!("                        \u{2502}   Kernel Space       \u{2502}");
+    println!("  0xFFFF_8000_0000_0000 \u{251c}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2524}");
+    println!("                        \u{2502}   (non-canonical)    \u{2502}");
+    println!("  0x0000_8000_0000_0000 \u{251c}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2524}");
+    println!("                        \u{2502}   User Space         \u{2502}");
+    println!("  0x0000_4444_4444_0000 \u{2502}   \u{250c}\u{2500} Heap (1 MiB) \u{2500}\u{2510}\u{2502}");
+    println!("                        \u{2502}   \u{2514}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2518}\u{2502}");
+    println!("  0x0000_0000_0000_1000 \u{2502}   (unmapped)         \u{2502}");
+    println!(
+        "  0x0000_0000_0000_0000 \u{2514}\u{2500}\u{2500} NULL guard page \u{2500}\u{2500}\u{2500}\u{2518}"
+    );
+    println!();
+    println!(
+        "  Physical: {} frames ({} KiB), {} free",
+        stats.total_frames,
+        stats.total_frames * 4,
+        stats.free_frames
+    );
+    println!(
+        "  Heap: {} used / {} free bytes",
+        stats.heap_used, stats.heap_free
+    );
+}
+
 /// Parses a hexadecimal string (with optional `0x`/`0X` prefix) into `u64`.
 fn parse_hex(s: &str) -> u64 {
     let s = s
