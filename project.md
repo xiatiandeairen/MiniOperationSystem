@@ -6,6 +6,7 @@
 ## 项目状态
 - ✅ **v0.1.0** "Hello, MiniOS!" — 首个可交互版本
 - ✅ **v0.2.0** "Teach by Running" — 8个教学命令
+- ✅ **v1.0-rc** "Production Polish" — 全功能 shell，含 memmap/pstree/safety/report/man/snapshot/version
 
 ## 架构概览
 13-crate Rust workspace, x86_64 bare-metal, bootloader_api v0.11

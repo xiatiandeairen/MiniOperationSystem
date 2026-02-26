@@ -176,7 +176,7 @@ fn find_similar(input: &str) -> Option<&'static str> {
 pub fn run_shell() -> ! {
     crate::commands::env_cmds::init_defaults();
 
-    println!("MiniOS Shell v0.7");
+    println!("MiniOS Shell v1.0-rc");
     println!("Type 'tutorial' to start learning, or 'help' for all commands.\n");
     serial_println!("Shell started");
 
