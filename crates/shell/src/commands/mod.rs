@@ -2,6 +2,7 @@
 
 pub mod basic;
 pub mod fs_cmds;
+pub mod mem_cmds;
 pub mod proc_cmds;
 pub mod sched_cmds;
 pub mod trace_cmds;
@@ -97,8 +98,23 @@ static COMMANDS: &[Command] = &[
     },
     Command {
         name: "trace",
-        description: "Trace subsystem (list|tree|stats|clear|export)",
+        description: "Trace subsystem (list|tree|stats|clear|export|follow)",
         handler: trace_cmds::cmd_trace,
+    },
+    Command {
+        name: "pagetable",
+        description: "Decompose virtual address into page table indices",
+        handler: mem_cmds::cmd_pagetable,
+    },
+    Command {
+        name: "frames",
+        description: "Show physical frame usage with visual bar",
+        handler: mem_cmds::cmd_frames,
+    },
+    Command {
+        name: "alloc",
+        description: "Allocate heap memory and show result",
+        handler: mem_cmds::cmd_alloc,
     },
 ];
 
