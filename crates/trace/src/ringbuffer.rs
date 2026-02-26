@@ -1,7 +1,7 @@
-//! Lock-free ring buffer for storing trace spans.
+//! Mutex-protected ring buffer for storing trace spans.
 //!
-//! Uses atomic operations for the write index so that concurrent writers
-//! can append spans without taking a lock. Readers copy out recent entries.
+//! The buffer uses a fixed-size array with a modular write index.
+//! All access is serialised by the [`TraceEngine`]'s `Mutex`.
 
 use crate::span::Span;
 use core::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
