@@ -20,6 +20,7 @@ use heap::KernelHeapAllocator;
 use paging::PageTableManager;
 
 /// Snapshot of memory statistics for read-only consumption by the shell.
+#[derive(Clone)]
 pub struct MemoryStats {
     pub free_frames: usize,
     pub total_frames: usize,
@@ -29,6 +30,17 @@ pub struct MemoryStats {
 
 /// Global memory stats snapshot, populated after init.
 pub static MEMORY_STATS: Mutex<Option<MemoryStats>> = Mutex::new(None);
+
+/// Returns a copy of the latest memory stats, or a zeroed snapshot if
+/// stats haven't been published yet.
+pub fn get_stats() -> MemoryStats {
+    MEMORY_STATS.lock().clone().unwrap_or(MemoryStats {
+        free_frames: 0,
+        total_frames: 0,
+        heap_used: 0,
+        heap_free: 0,
+    })
+}
 
 /// Aggregate handle for all memory-management state.
 pub struct MemoryManager {

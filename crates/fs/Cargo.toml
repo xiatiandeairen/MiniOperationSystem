@@ -6,4 +6,6 @@ description = "VFS and filesystem drivers for MiniOS"
 
 [dependencies]
 minios-common = { path = "../common" }
+minios-hal = { path = "../hal" }
+minios-memory = { path = "../memory" }
 spin = { workspace = true }

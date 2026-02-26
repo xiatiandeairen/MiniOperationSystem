@@ -62,6 +62,8 @@ name = "minios-fs"
 version = "0.1.0"
 dependencies = [
  "minios-common",
+ "minios-hal",
+ "minios-memory",
  "spin",
 ]
 
