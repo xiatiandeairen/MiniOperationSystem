@@ -7,6 +7,7 @@ use bootloader_api::{config::Mapping, entry_point, BootInfo, BootloaderConfig};
 use core::panic::PanicInfo;
 use minios_common::id::Pid;
 use minios_common::traits::fs::FileSystem;
+use minios_common::traits::trace::Tracer;
 use minios_common::types::{OpenFlags, Priority, ProcessState, ScheduleDecision};
 use minios_trace::trace_span;
 
@@ -69,8 +70,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     let mem = {
         let _mem_span = trace_span!("memory_init", module = "memory");
-        let m = minios_memory::init(boot_info).expect("memory init failed");
-        m
+        minios_memory::init(boot_info).expect("memory init failed")
     };
 
     boot_progress("Memory subsystem initialized");

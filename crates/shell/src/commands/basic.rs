@@ -221,7 +221,7 @@ pub fn cmd_repeat(args: &[&str]) {
 fn parse_usize_basic(s: &str) -> Option<usize> {
     let mut r: usize = 0;
     for b in s.bytes() {
-        if !(b'0'..=b'9').contains(&b) {
+        if !b.is_ascii_digit() {
             return None;
         }
         r = r.checked_mul(10)?.checked_add((b - b'0') as usize)?;
