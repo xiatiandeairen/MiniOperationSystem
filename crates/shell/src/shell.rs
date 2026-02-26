@@ -123,6 +123,8 @@ pub fn run_shell() -> ! {
     println!("Type 'tutorial' to start learning, or 'help' for all commands.\n");
     serial_println!("Shell started");
 
+    super::commands::basic::cmd_run(&["/etc/init.sh"]);
+
     let mut buf = LineBuffer::new();
     let mut last_cmd = [0u8; MAX_ENTRY];
     let mut last_cmd_len: usize = 0;

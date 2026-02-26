@@ -2,6 +2,7 @@
 
 pub mod basic;
 pub mod compare;
+pub mod crash;
 pub mod env_cmds;
 pub mod explain;
 pub mod fs_cmds;
@@ -9,6 +10,7 @@ pub mod lab;
 pub mod mem_cmds;
 pub mod proc_cmds;
 pub mod sched_cmds;
+pub mod text;
 pub mod trace_cmds;
 pub mod tutorial;
 
@@ -147,6 +149,16 @@ static COMMANDS: &[Command] = &[
         handler: lab::cmd_lab,
     },
     Command {
+        name: "crash",
+        description: "Safe fault experiments (oom|stack|divide-zero|null|fork-bomb)",
+        handler: crash::cmd_crash,
+    },
+    Command {
+        name: "run",
+        description: "Execute commands from a script file",
+        handler: basic::cmd_run,
+    },
+    Command {
         name: "history",
         description: "Show command history",
         handler: basic::cmd_history,
@@ -165,6 +177,21 @@ static COMMANDS: &[Command] = &[
         name: "env",
         description: "List all environment variables",
         handler: env_cmds::cmd_env,
+    },
+    Command {
+        name: "head",
+        description: "Show first N lines of a file",
+        handler: text::cmd_head,
+    },
+    Command {
+        name: "grep",
+        description: "Search for a pattern in a file",
+        handler: text::cmd_grep,
+    },
+    Command {
+        name: "wc",
+        description: "Count lines, words, bytes in a file",
+        handler: text::cmd_wc,
     },
 ];
 

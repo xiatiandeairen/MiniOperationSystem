@@ -71,6 +71,14 @@ All tasks are defined in `Makefile.toml`. Run via `cargo make <task>`:
   not the PS/2 keyboard. The shell will start but appear to hang waiting for
   input. Use `-display gtk` or similar for interactive keyboard testing.
 
+- **`minios-shell` host tests**: The shell crate links `minios-memory` which
+  declares a `#[global_allocator]` using `LockedHeap::empty()`. On host
+  (`x86_64-unknown-linux-gnu`) this allocator is never initialised, so the test
+  binary SIGABRTs before any test runs. Pure-logic tests (parser, `contains_pattern`)
+  compile fine but cannot execute. Only crates without a custom allocator
+  (`minios-common`, `minios-trace`, `minios-scheduler`, `minios-ipc`) are
+  testable on the host target.
+
 ### Development workflow
 
 Follow `plan.md` § 1.1–1.8 for the pre-check → develop → commit → review loop.

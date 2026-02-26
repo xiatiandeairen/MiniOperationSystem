@@ -51,3 +51,48 @@ pub fn parse(line: &str) -> ParsedCommand<'_> {
 
     result
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_empty() {
+        let p = parse("");
+        assert!(p.is_empty());
+    }
+
+    #[test]
+    fn parse_whitespace_only() {
+        let p = parse("   ");
+        assert!(p.is_empty());
+    }
+
+    #[test]
+    fn parse_single_command() {
+        let p = parse("help");
+        assert_eq!(p.command(), "help");
+        assert_eq!(p.args().len(), 0);
+    }
+
+    #[test]
+    fn parse_command_with_args() {
+        let p = parse("echo hello world");
+        assert_eq!(p.command(), "echo");
+        assert_eq!(p.args(), &["hello", "world"]);
+    }
+
+    #[test]
+    fn parse_extra_whitespace() {
+        let p = parse("  ls   /tmp  ");
+        assert_eq!(p.command(), "ls");
+        assert_eq!(p.args(), &["/tmp"]);
+    }
+
+    #[test]
+    fn parse_many_args() {
+        let p = parse("a b c d e f g h i j k l m n o p");
+        assert_eq!(p.command(), "a");
+        assert_eq!(p.args().len(), 15);
+    }
+}

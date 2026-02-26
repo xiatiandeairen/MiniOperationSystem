@@ -78,3 +78,69 @@ pub fn cmd_meminfo(_args: &[&str]) {
         stats.heap_used, stats.heap_free
     );
 }
+
+/// Reads a file and executes each line as a shell command.
+pub fn cmd_run(args: &[&str]) {
+    if args.is_empty() {
+        println!("Usage: run <script_file>");
+        return;
+    }
+
+    use minios_common::traits::fs::FileSystem;
+    use minios_common::types::OpenFlags;
+
+    let path = args[0];
+    let vfs_guard = minios_fs::VFS.lock();
+    let vfs = match vfs_guard.as_ref() {
+        Some(v) => v,
+        None => {
+            println!("run: filesystem not initialized");
+            return;
+        }
+    };
+
+    let fd = match vfs.open(path, OpenFlags::READ) {
+        Ok(fd) => fd,
+        Err(e) => {
+            println!("run: {}: {}", path, e);
+            return;
+        }
+    };
+
+    let mut buf = [0u8; 2048];
+    let n = match vfs.read(fd, &mut buf) {
+        Ok(n) => n,
+        Err(e) => {
+            println!("run: read error: {}", e);
+            return;
+        }
+    };
+    vfs.close(fd).ok();
+    drop(vfs_guard);
+
+    let content = match core::str::from_utf8(&buf[..n]) {
+        Ok(s) => s,
+        Err(_) => {
+            println!("run: file is not valid UTF-8");
+            return;
+        }
+    };
+
+    for line in content.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        println!("> {}", line);
+        let parsed = crate::parser::parse(line);
+        if parsed.is_empty() {
+            continue;
+        }
+        let cmd_name = parsed.command();
+        let cmd_args = parsed.args();
+        match crate::commands::find_command(cmd_name) {
+            Some(command) => (command.handler)(cmd_args),
+            None => println!("run: unknown command: {}", cmd_name),
+        }
+    }
+}
