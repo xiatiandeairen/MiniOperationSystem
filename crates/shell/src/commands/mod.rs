@@ -1,8 +1,11 @@
 //! Command registry for the shell.
 
 pub mod basic;
+pub mod compare;
+pub mod env_cmds;
 pub mod explain;
 pub mod fs_cmds;
+pub mod lab;
 pub mod mem_cmds;
 pub mod proc_cmds;
 pub mod sched_cmds;
@@ -132,6 +135,36 @@ static COMMANDS: &[Command] = &[
         name: "tutorial",
         description: "Interactive guide to exploring MiniOS",
         handler: tutorial::cmd_tutorial,
+    },
+    Command {
+        name: "compare",
+        description: "Compare MiniOS vs Linux design choices",
+        handler: compare::cmd_compare,
+    },
+    Command {
+        name: "lab",
+        description: "Run interactive OS learning experiments",
+        handler: lab::cmd_lab,
+    },
+    Command {
+        name: "history",
+        description: "Show command history",
+        handler: basic::cmd_history,
+    },
+    Command {
+        name: "signal",
+        description: "Send signal to process (stop|continue|kill)",
+        handler: sched_cmds::cmd_signal,
+    },
+    Command {
+        name: "set",
+        description: "Set an environment variable",
+        handler: env_cmds::cmd_set,
+    },
+    Command {
+        name: "env",
+        description: "List all environment variables",
+        handler: env_cmds::cmd_env,
     },
 ];
 

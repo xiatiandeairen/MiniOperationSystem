@@ -100,6 +100,39 @@ fn sched_config(args: &[&str]) {
     println!("Config display only in v0.3.0. Runtime modification coming later.");
 }
 
+/// Sends a signal to a process: stop, continue, or kill.
+pub fn cmd_signal(args: &[&str]) {
+    if args.len() < 2 {
+        println!("Usage: signal <pid> <stop|continue|kill>");
+        return;
+    }
+    let pid_num = match parse_u32(args[0]) {
+        Some(n) => n,
+        None => {
+            println!("signal: invalid pid '{}'", args[0]);
+            return;
+        }
+    };
+    let pid = Pid(pid_num);
+
+    match args[1] {
+        "stop" => match minios_process::manager::set_state(pid, ProcessState::Blocked) {
+            Ok(()) => println!("Process {} stopped.", pid),
+            Err(e) => println!("signal: {:?}", e),
+        },
+        "continue" | "cont" => match minios_process::manager::set_state(pid, ProcessState::Ready) {
+            Ok(()) => println!("Process {} continued.", pid),
+            Err(e) => println!("signal: {:?}", e),
+        },
+        "kill" => {
+            let _ = minios_process::manager::set_state(pid, ProcessState::Terminated);
+            minios_scheduler::SCHEDULER.lock().remove_task(pid);
+            println!("Process {} killed.", pid);
+        }
+        other => println!("Unknown signal '{}'. Use: stop, continue, kill", other),
+    }
+}
+
 /// Changes the scheduling priority of a process.
 pub fn cmd_nice(args: &[&str]) {
     if args.len() < 2 {
