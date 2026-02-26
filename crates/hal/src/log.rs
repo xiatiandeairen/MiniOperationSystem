@@ -161,10 +161,14 @@ pub fn log(level: LogLevel, module: &str, message: &str) {
     let msglen = message.len().min(127);
     entry.message[..msglen].copy_from_slice(&message.as_bytes()[..msglen]);
     entry.message_len = msglen;
-    entry.tick = crate::interrupts::tick_count();
+    #[cfg(target_os = "none")]
+    {
+        entry.tick = crate::interrupts::tick_count();
+    }
 
     LOG_BUFFER.lock().push(entry.clone());
 
+    #[cfg(target_os = "none")]
     crate::serial::_serial_print(format_args!(
         "[{}] [{}] {}\n",
         entry.level.as_str(),
