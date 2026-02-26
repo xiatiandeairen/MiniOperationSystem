@@ -40,11 +40,12 @@ pub fn cmd_clear(_args: &[&str]) {
     });
 }
 
-/// Shows the number of timer ticks since boot.
+/// Shows uptime in human-readable minutes and seconds.
 pub fn cmd_uptime(_args: &[&str]) {
     let ticks = minios_hal::interrupts::tick_count();
-    println!("Uptime: {} ticks", ticks);
-    serial_println!("Uptime: {} ticks", ticks);
+    let seconds = ticks / 100;
+    let minutes = seconds / 60;
+    println!("Uptime: {}m {}s ({} ticks)", minutes, seconds % 60, ticks);
     super::journey::mark(super::journey::STEP_UPTIME);
 }
 
