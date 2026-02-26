@@ -269,4 +269,37 @@ mod tests {
         let n = rb.read_recent(2, &mut out);
         assert_eq!(n, 0);
     }
+
+    #[test]
+    fn stats_zero_on_new() {
+        let rb = Box::new(RingBuffer::new());
+        let (cap, used, total) = rb.stats();
+        assert_eq!(cap, RING_CAPACITY);
+        assert_eq!(used, 0);
+        assert_eq!(total, 0);
+    }
+
+    #[test]
+    fn default_creates_empty_buffer() {
+        let rb = Box::new(RingBuffer::default());
+        let (_, used, total) = rb.stats();
+        assert_eq!(used, 0);
+        assert_eq!(total, 0);
+    }
+
+    #[test]
+    fn update_span_sets_status() {
+        let mut rb = Box::new(RingBuffer::new());
+        let mut span = make_span(42);
+        span.status = SpanStatus::InProgress;
+        rb.write(span);
+
+        let found = rb.update_span(SpanId(42), 1000, SpanStatus::Error);
+        assert!(found);
+
+        let mut out = default_spans::<1>();
+        rb.read_recent(1, &mut out);
+        assert_eq!(out[0].status, SpanStatus::Error);
+        assert_eq!(out[0].end_tsc, 1000);
+    }
 }

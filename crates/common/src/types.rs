@@ -296,4 +296,40 @@ mod tests {
         assert_ne!(sw, ScheduleDecision::Switch(Pid(6)));
         assert_eq!(idle, ScheduleDecision::Idle);
     }
+
+    #[test]
+    fn process_state_all_variants_display() {
+        let states = [
+            (ProcessState::Created, "CREATED"),
+            (ProcessState::Ready, "READY"),
+            (ProcessState::Running, "RUNNING"),
+            (ProcessState::Blocked, "BLOCKED"),
+            (ProcessState::Terminated, "TERMINATED"),
+        ];
+        for (state, expected) in &states {
+            assert_eq!(format!("{}", state), *expected);
+        }
+    }
+
+    #[test]
+    fn span_status_equality() {
+        assert_eq!(SpanStatus::Ok, SpanStatus::Ok);
+        assert_ne!(SpanStatus::Ok, SpanStatus::Error);
+        assert_ne!(SpanStatus::Error, SpanStatus::InProgress);
+    }
+
+    #[test]
+    fn seek_whence_variants() {
+        assert_eq!(SeekWhence::Start, SeekWhence::Start);
+        assert_ne!(SeekWhence::Start, SeekWhence::Current);
+        assert_ne!(SeekWhence::Current, SeekWhence::End);
+    }
+
+    #[test]
+    fn inode_type_variants() {
+        assert_eq!(InodeType::File, InodeType::File);
+        assert_ne!(InodeType::File, InodeType::Directory);
+        assert_ne!(InodeType::Directory, InodeType::CharDevice);
+        assert_ne!(InodeType::CharDevice, InodeType::Special);
+    }
 }
