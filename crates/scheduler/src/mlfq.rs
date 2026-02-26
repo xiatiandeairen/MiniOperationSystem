@@ -159,14 +159,15 @@ impl MlfqScheduler {
         }
     }
 
-    /// Boosts all tasks to the highest-priority queue.
+    /// Boosts all tasks to the highest-priority queue in O(n) time.
+    ///
+    /// Drains lower queues into queue 0. Duplicates are impossible because
+    /// each PID exists in exactly one queue at a time.
     fn boost_all(&mut self) {
         self.ticks_since_boost = 0;
         for q in 1..NUM_QUEUES {
             while let Some(pid) = self.queues[q].pop_front() {
-                if !self.queues[0].contains(&pid) {
-                    self.queues[0].push_back(pid);
-                }
+                self.queues[0].push_back(pid);
             }
         }
         if let Some(ref mut entry) = self.current {
