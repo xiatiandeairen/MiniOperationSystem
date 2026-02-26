@@ -22,8 +22,34 @@ pub fn read_procfs(path: &str) -> Result<Vec<u8>, FsError> {
         "/proc/scheduler" => Ok(generate_scheduler()),
         "/proc/version" => Ok(generate_version()),
         "/proc/trace" => Ok(generate_trace_stats()),
+        _ if path.starts_with("/proc/") && path.ends_with("/status") => {
+            let pid_str = &path[6..path.len() - 7];
+            let pid_num = pid_str.bytes().fold(0u32, |a, b| {
+                if (b'0'..=b'9').contains(&b) {
+                    a * 10 + (b - b'0') as u32
+                } else {
+                    a
+                }
+            });
+            Ok(generate_process_status(pid_num))
+        }
         _ => Err(FsError::NotFound),
     }
+}
+
+fn generate_process_status(pid: u32) -> Vec<u8> {
+    let procs = minios_process::manager::list_processes();
+    for p in &procs {
+        if p.pid.0 == pid {
+            let name = core::str::from_utf8(&p.name[..p.name_len]).unwrap_or("?");
+            return format!(
+                "PID: {}\nName: {}\nState: {}\nPriority: {}\nCPU Time: {} ticks\n",
+                p.pid, name, p.state, p.priority.0, p.cpu_time_ticks
+            )
+            .into_bytes();
+        }
+    }
+    format!("Process {} not found\n", pid).into_bytes()
 }
 
 /// Returns metadata for a procfs entry.
@@ -31,6 +57,12 @@ pub fn stat_procfs(path: &str) -> Result<FileStat, FsError> {
     match path {
         "/proc/meminfo" | "/proc/uptime" | "/proc/interrupts" | "/proc/scheduler"
         | "/proc/version" | "/proc/trace" | "/proc" => Ok(FileStat {
+            size: 0,
+            inode_type: InodeType::Special,
+            created_at: 0,
+            modified_at: 0,
+        }),
+        _ if path.starts_with("/proc/") && path.ends_with("/status") => Ok(FileStat {
             size: 0,
             inode_type: InodeType::Special,
             created_at: 0,
