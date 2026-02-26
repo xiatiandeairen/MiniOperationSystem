@@ -14,6 +14,7 @@ pub mod lab;
 pub mod man;
 pub mod mem_cmds;
 pub mod proc_cmds;
+pub mod quiz;
 pub mod sched_cmds;
 pub mod text;
 pub mod trace_cmds;
@@ -287,6 +288,11 @@ static COMMANDS: &[Command] = &[
         name: "sleep",
         description: "Sleep for N ticks (default 100)",
         handler: basic::cmd_sleep,
+    },
+    Command {
+        name: "quiz",
+        description: "OS knowledge quiz (process, memory, fs)",
+        handler: quiz::cmd_quiz,
     },
 ];
 
