@@ -252,6 +252,11 @@ static COMMANDS: &[Command] = &[
         description: "Show ASCII memory layout diagram",
         handler: mem_cmds::cmd_memmap,
     },
+    Command {
+        name: "pstree",
+        description: "Show process hierarchy tree",
+        handler: proc_cmds::cmd_pstree,
+    },
 ];
 
 /// Finds a command by name.

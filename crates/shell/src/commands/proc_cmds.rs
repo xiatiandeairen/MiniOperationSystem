@@ -18,6 +18,22 @@ pub fn cmd_ps(_args: &[&str]) {
     super::journey::mark(super::journey::STEP_PS);
 }
 
+/// Displays a simple process tree rooted at PID 0.
+pub fn cmd_pstree(_args: &[&str]) {
+    let procs = minios_process::manager::list_processes();
+    println!("Process Tree:");
+    for p in &procs {
+        if p.pid.0 == 0 {
+            println!("  PID 0 [idle] {}", p.state);
+        } else {
+            println!(
+                "  \u{2514}\u{2500} PID {} [{}] {} (cpu: {})",
+                p.pid, p.state, p.priority.0, p.cpu_time_ticks
+            );
+        }
+    }
+}
+
 /// Shows a snapshot of system status (processes + memory + interrupts).
 pub fn cmd_top(_args: &[&str]) {
     let stats = minios_memory::get_stats();
