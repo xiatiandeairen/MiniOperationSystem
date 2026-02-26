@@ -94,7 +94,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let stats = minios_memory::get_stats();
     minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::GREEN);
     minios_hal::println!(
-        "  MiniOS v1.0-rc | x86-64 | {} KiB RAM",
+        "  MiniOS v1.0 | x86-64 | {} KiB RAM",
         stats.total_frames * 4
     );
     minios_hal::println!("  Type 'tutorial' to start learning");
