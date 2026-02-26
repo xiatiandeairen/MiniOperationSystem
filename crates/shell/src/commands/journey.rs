@@ -73,6 +73,12 @@ fn print_chapter(title: &str, steps: &[(u32, &str, &str)]) {
     println!();
 }
 
+/// Returns the count of completed journey steps.
+pub fn completed_count() -> usize {
+    let bits = COMPLETED.load(Ordering::Relaxed);
+    (0..17).filter(|&i| bits & (1 << i) != 0).count()
+}
+
 /// Shows the learning journey progress across all chapters.
 pub fn cmd_journey(_args: &[&str]) {
     println!("=== Your MiniOS Learning Journey ===");

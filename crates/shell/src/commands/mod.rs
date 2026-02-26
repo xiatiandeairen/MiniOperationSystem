@@ -299,6 +299,11 @@ static COMMANDS: &[Command] = &[
         description: "Verifiable learning challenges (create-file, find-pid, memory-check)",
         handler: quiz::cmd_challenge,
     },
+    Command {
+        name: "session",
+        description: "Export current learning session summary",
+        handler: basic::cmd_export_session,
+    },
 ];
 
 /// Finds a command by name.

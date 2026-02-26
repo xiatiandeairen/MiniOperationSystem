@@ -397,6 +397,22 @@ pub fn cmd_run(args: &[&str]) {
     super::journey::mark(super::journey::STEP_RUN);
 }
 
+/// Exports a summary of the current learning session.
+pub fn cmd_export_session(_args: &[&str]) {
+    println!("=== Session Export ===");
+    let hist_count = crate::shell::HISTORY.lock().len();
+    println!("Commands executed: {}", hist_count);
+    for i in 0..hist_count {
+        if let Some(cmd) = crate::shell::HISTORY.lock().get(i) {
+            println!("  {}. {}", i + 1, cmd);
+        }
+    }
+    println!();
+    let completed = crate::commands::journey::completed_count();
+    println!("Journey progress: {}/17 steps", completed);
+    println!("---");
+}
+
 /// Prints a structured course outline for using MiniOS as a teaching tool.
 pub fn cmd_syllabus(_args: &[&str]) {
     println!("=== MiniOS Operating Systems Syllabus ===");
