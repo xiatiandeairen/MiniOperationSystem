@@ -41,9 +41,11 @@ fn read_line(buf: &mut LineBuffer) {
     }
 }
 
-/// Prints the shell prompt.
+/// Prints the shell prompt in green.
 fn print_prompt() {
+    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::GREEN);
     print!("MiniOS $ ");
+    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
 }
 
 /// Runs the interactive shell loop. This function never returns.
@@ -75,7 +77,11 @@ pub fn run_shell() -> ! {
 
         match commands::find_command(cmd_name) {
             Some(command) => (command.handler)(args),
-            None => println!("Unknown command: {}", cmd_name),
+            None => {
+                minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::RED);
+                println!("Unknown command: {}", cmd_name);
+                minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
+            }
         }
     }
 }
