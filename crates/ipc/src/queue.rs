@@ -9,7 +9,7 @@ use minios_common::id::Pid;
 /// Maximum data payload in a single message.
 pub const MAX_MSG_DATA: usize = 256;
 
-/// A single IPC message.
+/// A single IPC message carrying optional trace context for cross-process linking.
 #[derive(Clone)]
 pub struct Message {
     /// PID of the sending process.
@@ -20,6 +20,11 @@ pub struct Message {
     pub data: [u8; MAX_MSG_DATA],
     /// Number of valid bytes in `data`.
     pub data_len: usize,
+    /// Trace context from the sender, enabling cross-process trace chain linking.
+    /// When present, the receiver can call `tracer.set_context()` to continue
+    /// the same trace chain, making the full send→receive path visible in the
+    /// trace viewer as a single connected trace.
+    pub trace_context: Option<minios_common::types::TraceContext>,
 }
 
 impl Message {
@@ -33,7 +38,20 @@ impl Message {
             msg_type,
             data,
             data_len: len,
+            trace_context: None,
         }
+    }
+
+    /// Creates a message with an attached trace context for cross-process tracing.
+    pub fn with_trace(
+        sender: Pid,
+        msg_type: u32,
+        payload: &[u8],
+        ctx: minios_common::types::TraceContext,
+    ) -> Self {
+        let mut msg = Self::new(sender, msg_type, payload);
+        msg.trace_context = Some(ctx);
+        msg
     }
 }
 
