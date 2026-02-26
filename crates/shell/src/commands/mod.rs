@@ -7,6 +7,7 @@ pub mod mem_cmds;
 pub mod proc_cmds;
 pub mod sched_cmds;
 pub mod trace_cmds;
+pub mod tutorial;
 
 /// A shell command with its name, description, and handler function.
 pub struct Command {
@@ -41,6 +42,11 @@ static COMMANDS: &[Command] = &[
         name: "meminfo",
         description: "Show memory statistics",
         handler: basic::cmd_meminfo,
+    },
+    Command {
+        name: "interrupts",
+        description: "Show interrupt statistics",
+        handler: basic::cmd_interrupts,
     },
     Command {
         name: "ls",
@@ -119,13 +125,13 @@ static COMMANDS: &[Command] = &[
     },
     Command {
         name: "explain",
-        description: "Explain how a command works inside the OS",
+        description: "Explain how a command works internally",
         handler: explain::cmd_explain,
     },
     Command {
         name: "tutorial",
-        description: "Interactive guide for first-time users",
-        handler: explain::cmd_tutorial,
+        description: "Interactive guide to exploring MiniOS",
+        handler: tutorial::cmd_tutorial,
     },
 ];
 

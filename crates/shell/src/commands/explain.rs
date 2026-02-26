@@ -1,11 +1,11 @@
-//! The `explain` command describes what a shell command does at the OS level.
+//! The `explain` command — teaches what a command does without executing it.
 
 use minios_hal::println;
 
 pub fn cmd_explain(args: &[&str]) {
     if args.is_empty() {
         println!("Usage: explain <command>");
-        println!("Explains what happens inside the OS when a command runs.");
+        println!("Shows what a command does internally, without executing it.");
         return;
     }
     match args[0] {
@@ -15,176 +15,138 @@ pub fn cmd_explain(args: &[&str]) {
         "meminfo" => explain_meminfo(),
         "trace" => explain_trace(),
         "spawn" => explain_spawn(),
-        "help" => explain_help(),
-        "echo" => explain_echo(),
-        "write" => explain_write(),
-        "mkdir" => explain_mkdir(),
+        "sched" => explain_sched(),
+        "pagetable" => explain_pagetable(),
+        "frames" => explain_frames(),
         other => println!("No explanation available for '{}'.", other),
     }
 }
 
 fn explain_ls() {
     println!("=== How 'ls' works ===");
-    println!("");
-    println!("  1. Shell parses input -> command=\"ls\", args=[path]");
-    println!("  2. VFS.open(path, READ)");
-    println!("     -> Path resolution: split by '/', walk inode tree from root");
-    println!("     -> Returns a FileDescriptor (integer handle)");
-    println!("  3. VFS.readdir(fd)");
-    println!("     -> RamFS iterates children of the directory inode");
-    println!("     -> Returns list of (name, type, size)");
-    println!("  4. For each entry: print to framebuffer console");
-    println!("  5. VFS.close(fd) -> releases the file descriptor slot");
-    println!("");
+    println!();
+    println!("1. Shell parses input → command='ls', args=[path]");
+    println!("2. VFS resolves the path by walking the inode tree:");
+    println!("   '/' → inode 0 (root) → lookup each path component");
+    println!("3. For each child inode in the directory:");
+    println!("   - Read the inode's type (file/dir) and size");
+    println!("   - Format and print: type, size, name");
+    println!();
     println!("Key concepts:");
-    println!("  - VFS: abstraction layer between commands and storage drivers");
-    println!("  - Inode: unique ID for every file/directory (not the name!)");
-    println!("  - File Descriptor: per-process handle to an open file");
+    println!("  Inode  — a numbered record storing file metadata + data");
+    println!("  VFS    — Virtual File System, abstracts storage backends");
+    println!("  RamFS  — our in-memory filesystem (data lives in heap)");
 }
 
 fn explain_cat() {
     println!("=== How 'cat' works ===");
-    println!("");
-    println!("  1. VFS.open(path, READ) -> get file descriptor");
-    println!("  2. Loop: VFS.read(fd, buffer, 512)");
-    println!("     -> RamFS copies bytes from inode's data vector");
-    println!("     -> Returns 0 when end-of-file reached");
-    println!("  3. Print buffer contents to console");
-    println!("  4. VFS.close(fd)");
-    println!("");
-    println!("For /proc/ files:");
-    println!("  - ProcFS generates content on-the-fly (not stored on disk)");
-    println!("  - /proc/meminfo reads live stats from the frame allocator");
-    println!("  - /proc/uptime reads the timer tick counter");
+    println!();
+    println!("1. sys_open(path, READ) → VFS finds the inode, creates a");
+    println!("   file descriptor (FD) pointing to offset 0");
+    println!("2. sys_read(fd, buf, 512) → VFS reads data from the inode");
+    println!("   starting at the current offset, advances offset");
+    println!("3. Print the bytes to screen, repeat until read returns 0");
+    println!("4. sys_close(fd) → VFS releases the file descriptor");
+    println!();
+    println!("Key concepts:");
+    println!("  File descriptor — a process-local handle to an open file");
+    println!("  Offset — current read/write position within the file");
+    println!("  For /proc/* files, content is generated on each open()");
 }
 
 fn explain_ps() {
     println!("=== How 'ps' works ===");
-    println!("");
-    println!("  1. Lock the process table (spinlock)");
-    println!("  2. Iterate all 64 slots, skip empty ones");
-    println!("  3. For each process: read PID, state, priority, CPU time");
-    println!("  4. Print formatted table");
-    println!("");
-    println!("Process states: CREATED -> READY -> RUNNING -> BLOCKED -> TERMINATED");
-    println!("The scheduler picks from READY tasks based on priority.");
+    println!();
+    println!("1. Lock the process table (a fixed-size array of PCBs)");
+    println!("2. For each non-empty slot, read:");
+    println!("   - PID (Process ID, monotonically increasing)");
+    println!("   - State (CREATED/READY/RUNNING/BLOCKED/TERMINATED)");
+    println!("   - Priority (0=HIGH, 1=MED, 2=LOW, 3=IDLE)");
+    println!("   - CPU time (ticks spent running)");
+    println!();
+    println!("Key concepts:");
+    println!("  PCB — Process Control Block, stores all process state");
+    println!("  State machine — processes transition through defined states");
+    println!("  Scheduler decides which READY process runs next");
 }
 
 fn explain_meminfo() {
     println!("=== How 'meminfo' works ===");
-    println!("");
-    println!("  1. Read frame allocator stats:");
-    println!("     -> Bitmap tracks which 4KiB frames are used/free");
-    println!("     -> Total frames = physical RAM / 4096");
-    println!("  2. Read heap allocator stats:");
-    println!("     -> Linked-list allocator tracks free blocks");
-    println!("     -> Heap is a 1MiB region at virtual address 0x4444_4444_0000");
-    println!("");
-    println!("Memory hierarchy:");
-    println!("  Physical frames (4KiB) -> Page tables -> Virtual addresses");
-    println!("  Heap allocator manages fine-grained allocations within mapped pages");
+    println!();
+    println!("Memory has two layers:");
+    println!("  Physical frames — 4 KiB blocks managed by a bitmap allocator");
+    println!("    Each bit = 1 frame. Set = in use, clear = free.");
+    println!("  Heap — contiguous virtual memory for alloc/Vec/String");
+    println!("    Managed by a linked-list free-block allocator.");
+    println!();
+    println!("meminfo reads counters from both allocators.");
 }
 
 fn explain_trace() {
-    println!("=== How 'trace' works ===");
-    println!("");
-    println!("  The trace engine records timestamped spans for every OS operation.");
-    println!("  Each span has: trace_id, span_id, parent, name, module, duration.");
-    println!("");
-    println!("  trace list   -> reads recent spans from a 4096-slot ring buffer");
-    println!("  trace tree   -> reconstructs parent-child hierarchy from span_ids");
-    println!("  trace follow -> clears buffer, runs a command, shows only new spans");
-    println!("  trace export -> serializes spans as JSON to the serial port");
-    println!("");
-    println!("Ring buffer uses atomic write index. Old spans are overwritten.");
+    println!("=== How tracing works ===");
+    println!();
+    println!("Every kernel operation can create a 'span':");
+    println!("  begin_span(name, module) → push to context stack");
+    println!("  ... do work ...");
+    println!("  end_span() → pop context, record duration");
+    println!();
+    println!("Spans form a tree via parent_span_id linkage.");
+    println!("The ring buffer stores the last 4096 spans.");
+    println!("'trace follow <cmd>' clears the buffer, runs the");
+    println!("command, then shows only that command's spans.");
 }
 
 fn explain_spawn() {
     println!("=== How 'spawn' works ===");
-    println!("");
-    println!("  1. Allocate PID (atomic counter)");
-    println!("  2. Allocate 16KiB kernel stack via heap");
-    println!("  3. Create CpuContext: RSP=stack top, RIP=entry function");
-    println!("  4. Insert into process table (array of 64 slots)");
-    println!("  5. Add to scheduler's MLFQ queue");
-    println!("");
-    println!("The MLFQ scheduler has 4 priority queues:");
-    println!("  Queue 0 [HIGH]:  time_slice = 2 ticks");
-    println!("  Queue 1 [MED]:   time_slice = 4 ticks");
-    println!("  Queue 2 [LOW]:   time_slice = 8 ticks");
-    println!("  Queue 3 [IDLE]:  time_slice = 16 ticks");
+    println!();
+    println!("1. Allocate a 16 KiB kernel stack from the heap");
+    println!("2. Create a CpuContext: RSP=stack top, RIP=entry function");
+    println!("3. Insert a PCB into the process table (next free slot)");
+    println!("4. Add the PID to the scheduler's ready queue");
+    println!();
+    println!("The task won't actually run until the scheduler switches to it.");
+    println!("Currently MiniOS uses cooperative scheduling (no preemption).");
 }
 
-fn explain_help() {
-    println!("'help' simply iterates a static array of Command structs");
-    println!("and prints each name + description. No OS primitives involved.");
+fn explain_sched() {
+    println!("=== How the MLFQ scheduler works ===");
+    println!();
+    println!("4 priority queues, each with a time slice:");
+    println!("  Queue 0 [HIGH]:  2 ticks");
+    println!("  Queue 1 [MED]:   4 ticks");
+    println!("  Queue 2 [LOW]:   8 ticks");
+    println!("  Queue 3 [IDLE]: 16 ticks");
+    println!();
+    println!("Rules:");
+    println!("  - New tasks start at the highest priority");
+    println!("  - Exhaust your time slice → demoted to next queue");
+    println!("  - Every 100 ticks → all tasks boosted to queue 0");
+    println!("  - Boost prevents starvation of low-priority tasks");
 }
 
-fn explain_echo() {
-    println!("'echo' writes arguments to the framebuffer console.");
-    println!("Each character is drawn as 8x16 pixels using a bitmap font.");
-    println!("The framebuffer is memory-mapped at the address provided by the bootloader.");
+fn explain_pagetable() {
+    println!("=== How virtual address translation works ===");
+    println!();
+    println!("x86-64 uses 4-level page tables (48-bit virtual addresses):");
+    println!("  Bits 47-39: PML4 index (512 entries)");
+    println!("  Bits 38-30: PDPT index (512 entries)");
+    println!("  Bits 29-21: PD index   (512 entries)");
+    println!("  Bits 20-12: PT index   (512 entries)");
+    println!("  Bits 11-0:  Page offset (4096 bytes)");
+    println!();
+    println!("Each level is a table of 512 8-byte entries.");
+    println!("Each entry contains the physical address of the next table");
+    println!("(or the final frame) plus permission flags (Present, Writable).");
 }
 
-fn explain_write() {
-    println!("=== How 'write' works ===");
-    println!("");
-    println!("  1. VFS.open(path, CREATE | WRITE)");
-    println!("     -> If file doesn't exist: create new inode + add to parent");
-    println!("  2. VFS.write(fd, data)");
-    println!("     -> RamFS extends inode's data Vec, copies bytes in");
-    println!("  3. VFS.close(fd)");
-}
-
-fn explain_mkdir() {
-    println!("=== How 'mkdir' works ===");
-    println!("");
-    println!("  1. Resolve parent path -> get parent inode ID");
-    println!("  2. Create new directory inode (type=Directory)");
-    println!("  3. Add new inode ID to parent's children list");
-    println!("  4. Insert inode into RamFS's BTreeMap<InodeId, Inode>");
-}
-
-pub fn cmd_tutorial(_args: &[&str]) {
-    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::GREEN);
-    println!("+==========================================+");
-    println!("|   Welcome to the MiniOS Tutorial!        |");
-    println!("+==========================================+");
-    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
-    println!("");
-    println!("Let's explore how an operating system works.");
-    println!("Try these commands in order:");
-    println!("");
-    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::YELLOW);
-    println!("  Step 1: help");
-    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
-    println!("    -> See all available commands");
-    println!("");
-    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::YELLOW);
-    println!("  Step 2: ps");
-    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
-    println!("    -> See running processes (like Task Manager)");
-    println!("");
-    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::YELLOW);
-    println!("  Step 3: ls /");
-    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
-    println!("    -> List the root filesystem");
-    println!("");
-    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::YELLOW);
-    println!("  Step 4: explain ls");
-    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
-    println!("    -> Learn what happens INSIDE the OS when you run 'ls'");
-    println!("");
-    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::YELLOW);
-    println!("  Step 5: trace follow ls /");
-    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
-    println!("    -> Watch the actual execution trace of 'ls'");
-    println!("");
-    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::YELLOW);
-    println!("  Step 6: cat /proc/meminfo");
-    minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
-    println!("    -> Read live memory statistics from the kernel");
-    println!("");
-    println!("Type 'explain <command>' for detailed explanations.");
-    println!("Type 'tutorial' to see this guide again.");
+fn explain_frames() {
+    println!("=== How physical frame allocation works ===");
+    println!();
+    println!("The bitmap allocator tracks every 4 KiB physical frame.");
+    println!("  256 MiB RAM = 65,536 frames = 8,192 bytes of bitmap.");
+    println!("  Bit set = frame in use, bit clear = frame free.");
+    println!();
+    println!("allocate_frame(): scan bitmap for first clear bit, set it.");
+    println!("deallocate_frame(): check bit is set, then clear it.");
+    println!("  (Double-free is detected and returns an error.)");
 }
