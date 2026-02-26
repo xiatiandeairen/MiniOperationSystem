@@ -57,6 +57,7 @@ pub fn cmd_grep(args: &[&str]) {
     if found == 0 {
         println!("(no matches)");
     }
+    super::journey::mark(super::journey::STEP_GREP);
 }
 
 /// Simple substring search (case-sensitive).

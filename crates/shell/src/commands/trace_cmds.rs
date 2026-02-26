@@ -40,10 +40,16 @@ pub fn cmd_trace(args: &[&str]) {
     match sub {
         "list" => trace_list(),
         "tree" => trace_tree(),
-        "stats" => trace_stats(),
+        "stats" => {
+            trace_stats();
+            super::journey::mark(super::journey::STEP_TRACE_STATS);
+        }
         "clear" => trace_clear(),
         "export" => trace_export(),
-        "follow" => trace_follow(&args[1..]),
+        "follow" => {
+            trace_follow(&args[1..]);
+            super::journey::mark(super::journey::STEP_TRACE_FOLLOW);
+        }
         _ => println!("Usage: trace <list|tree|stats|clear|export|follow>"),
     }
 }
@@ -191,7 +197,15 @@ fn trace_export() {
         return;
     }
     println!("Exporting {} spans to serial port...", n);
+
+    minios_hal::serial_println!("---TRACE-BEGIN---");
+    minios_hal::serial_print!("{{\"format\":\"minios-trace-v1\",\"spans\":");
     let mut writer = minios_trace::export::SerialJsonWriter;
     let _ = minios_trace::export::export_json(&mut writer, &buf[..n]);
-    println!("Export complete. Capture serial output to load in trace-viewer.");
+    minios_hal::serial_println!("}}");
+    minios_hal::serial_println!("---TRACE-END---");
+
+    println!("Export complete.");
+    println!("Capture with: cargo make run-trace");
+    println!("Then load trace-output.log in trace-viewer.");
 }

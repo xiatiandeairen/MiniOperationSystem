@@ -1,11 +1,13 @@
 //! Command registry for the shell.
 
+pub mod alias;
 pub mod basic;
 pub mod compare;
 pub mod crash;
 pub mod env_cmds;
 pub mod explain;
 pub mod fs_cmds;
+pub mod journey;
 pub mod lab;
 pub mod mem_cmds;
 pub mod proc_cmds;
@@ -192,6 +194,21 @@ static COMMANDS: &[Command] = &[
         name: "wc",
         description: "Count lines, words, bytes in a file",
         handler: text::cmd_wc,
+    },
+    Command {
+        name: "alias",
+        description: "Create or list command aliases",
+        handler: alias::cmd_alias,
+    },
+    Command {
+        name: "journey",
+        description: "Show your MiniOS learning journey progress",
+        handler: journey::cmd_journey,
+    },
+    Command {
+        name: "graduation",
+        description: "Show learning completion report",
+        handler: journey::cmd_graduation,
     },
 ];
 

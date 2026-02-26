@@ -3,11 +3,18 @@
 //! Provides a global [`WRITER`] that can output characters to the 80×25
 //! VGA text buffer at physical address `0xB8000`.
 
+extern crate alloc;
+
+use alloc::vec::Vec;
 use core::fmt;
 use core::ptr::NonNull;
 use minios_common::types::{Color, ColorCode};
 use spin::{Lazy, Mutex};
 use volatile::VolatilePtr;
+
+/// Output capture buffer for shell pipe operations.
+/// When `Some`, all `_print` output is redirected here instead of the screen.
+pub static PIPE_BUFFER: Mutex<Option<Vec<u8>>> = Mutex::new(None);
 
 /// VGA buffer width in columns.
 const BUFFER_WIDTH: usize = 80;
@@ -169,16 +176,33 @@ pub fn clear_screen() {
 ///
 /// Routes to the framebuffer console if available, otherwise falls back to
 /// VGA text buffer. Only one path is used to avoid double-output.
+/// When the pipe capture buffer is active, output is redirected there instead.
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use fmt::Write;
     x86_64::instructions::interrupts::without_interrupts(|| {
+        {
+            let mut pipe = PIPE_BUFFER.lock();
+            if let Some(ref mut buf) = *pipe {
+                let mut w = PipeWriter(buf);
+                let _ = w.write_fmt(args);
+                return;
+            }
+        }
         if let Some(ref mut fb) = *crate::framebuffer::CONSOLE.lock() {
             let _ = fb.write_fmt(args);
         } else {
             let _ = WRITER.lock().write_fmt(args);
         }
     });
+}
+
+struct PipeWriter<'a>(&'a mut Vec<u8>);
+impl fmt::Write for PipeWriter<'_> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.0.extend_from_slice(s.as_bytes());
+        Ok(())
+    }
 }
 
 /// Prints to the VGA text buffer.

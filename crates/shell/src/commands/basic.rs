@@ -8,6 +8,7 @@ pub fn cmd_help(_args: &[&str]) {
     for cmd in super::list_commands() {
         println!("  {:10} - {}", cmd.name, cmd.description);
     }
+    super::journey::mark(super::journey::STEP_HELP);
 }
 
 /// Prints arguments separated by spaces.
@@ -37,6 +38,7 @@ pub fn cmd_uptime(_args: &[&str]) {
     let ticks = minios_hal::interrupts::tick_count();
     println!("Uptime: {} ticks", ticks);
     serial_println!("Uptime: {} ticks", ticks);
+    super::journey::mark(super::journey::STEP_UPTIME);
 }
 
 /// Shows interrupt statistics (timer and keyboard counters).
@@ -77,6 +79,7 @@ pub fn cmd_meminfo(_args: &[&str]) {
         "Heap:   {} used / {} free",
         stats.heap_used, stats.heap_free
     );
+    super::journey::mark(super::journey::STEP_MEMINFO);
 }
 
 /// Reads a file and executes each line as a shell command.
@@ -143,4 +146,5 @@ pub fn cmd_run(args: &[&str]) {
             None => println!("run: unknown command: {}", cmd_name),
         }
     }
+    super::journey::mark(super::journey::STEP_RUN);
 }

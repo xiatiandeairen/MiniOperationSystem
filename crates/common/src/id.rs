@@ -180,4 +180,46 @@ mod tests {
         assert_eq!(a, TraceId(1));
         assert_eq!(b, TraceId(2));
     }
+
+    #[test]
+    fn pid_ordering() {
+        assert!(Pid(1) < Pid(2));
+        assert_eq!(Pid(5), Pid(5));
+    }
+
+    #[test]
+    fn file_descriptor_equality() {
+        assert_eq!(FileDescriptor(3), FileDescriptor(3));
+        assert_ne!(FileDescriptor(1), FileDescriptor(2));
+    }
+
+    #[test]
+    fn inode_id_equality() {
+        assert_eq!(InodeId(0), InodeId(0));
+        assert_ne!(InodeId(1), InodeId(2));
+    }
+
+    #[test]
+    fn queue_id_equality() {
+        assert_eq!(QueueId(1), QueueId(1));
+        assert_ne!(QueueId(0), QueueId(1));
+    }
+
+    #[test]
+    fn shm_id_equality() {
+        assert_eq!(ShmId(0), ShmId(0));
+        assert_ne!(ShmId(1), ShmId(2));
+    }
+
+    #[test]
+    fn span_id_generator_starts_at_one() {
+        let gen = SpanIdGenerator::default();
+        assert_eq!(gen.next(), SpanId(1));
+    }
+
+    #[test]
+    fn trace_id_generator_default() {
+        let gen = TraceIdGenerator::default();
+        assert_eq!(gen.next(), TraceId(1));
+    }
 }

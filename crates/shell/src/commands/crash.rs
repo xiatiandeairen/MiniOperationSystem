@@ -18,6 +18,9 @@ pub fn cmd_crash(args: &[&str]) {
         "fork-bomb" | "5" => crash_fork_bomb(),
         _ => println!("Unknown scenario. Type 'crash list' for options."),
     }
+    if args[0] != "list" {
+        super::journey::mark(super::journey::STEP_CRASH);
+    }
 }
 
 fn crash_list() {

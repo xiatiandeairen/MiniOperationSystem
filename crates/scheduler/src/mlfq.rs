@@ -278,4 +278,35 @@ mod tests {
         let dec = sched.tick();
         assert!(matches!(dec, ScheduleDecision::Idle));
     }
+
+    #[test]
+    fn current_pid_none_when_empty() {
+        let sched = MlfqScheduler::new();
+        assert!(sched.current_pid().is_none());
+    }
+
+    #[test]
+    fn set_running_tracks_current() {
+        let mut sched = MlfqScheduler::new();
+        sched.add_task(Pid(5), Priority::HIGH);
+        sched.set_running(Pid(5), 0);
+        assert_eq!(sched.current_pid(), Some(Pid(5)));
+    }
+
+    #[test]
+    fn default_creates_empty_scheduler() {
+        let sched = MlfqScheduler::default();
+        let stats = sched.stats();
+        assert_eq!(stats.total_ticks, 0);
+        assert_eq!(stats.total_switches, 0);
+    }
+
+    #[test]
+    fn duplicate_add_is_ignored() {
+        let mut sched = MlfqScheduler::new();
+        sched.add_task(Pid(1), Priority::HIGH);
+        sched.add_task(Pid(1), Priority::HIGH);
+        let stats = sched.stats();
+        assert_eq!(stats.queue_lengths[0], 1);
+    }
 }

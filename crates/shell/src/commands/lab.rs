@@ -18,6 +18,9 @@ pub fn cmd_lab(args: &[&str]) {
         "fs-operations" | "5" => lab_fs_operations(),
         _ => println!("Unknown lab. Type 'lab list' to see available labs."),
     }
+    if args[0] != "list" {
+        super::journey::mark(super::journey::STEP_LAB);
+    }
 }
 
 fn lab_list() {

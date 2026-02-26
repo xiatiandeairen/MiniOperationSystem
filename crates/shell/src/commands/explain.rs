@@ -20,6 +20,7 @@ pub fn cmd_explain(args: &[&str]) {
         "frames" => explain_frames(),
         other => println!("No explanation available for '{}'.", other),
     }
+    super::journey::mark(super::journey::STEP_EXPLAIN);
 }
 
 fn explain_ls() {

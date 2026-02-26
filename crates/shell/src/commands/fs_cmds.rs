@@ -42,6 +42,7 @@ pub fn cmd_ls(args: &[&str]) {
         }
         Err(e) => println!("ls: {}: {}", path, e),
     }
+    super::journey::mark(super::journey::STEP_LS);
 }
 
 /// Prints file contents.
@@ -79,6 +80,9 @@ pub fn cmd_cat(args: &[&str]) {
                 }
             }
             let _ = vfs.close(fd);
+            if path.starts_with("/proc") {
+                super::journey::mark(super::journey::STEP_CAT_PROC);
+            }
         }
         Err(e) => println!("cat: {}: {}", path, e),
     }
