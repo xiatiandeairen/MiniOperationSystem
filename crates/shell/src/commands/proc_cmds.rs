@@ -1,6 +1,20 @@
 //! Process shell commands: ps, top.
 
+use minios_common::types::ProcessState;
 use minios_hal::println;
+
+/// Sets text color based on process state.
+fn color_for_state(state: ProcessState) {
+    match state {
+        ProcessState::Running => {
+            minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::GREEN)
+        }
+        ProcessState::Blocked | ProcessState::Terminated => {
+            minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::RED)
+        }
+        _ => minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT),
+    }
+}
 
 /// Lists all processes with their PID, name, state, priority, and CPU time.
 pub fn cmd_ps(_args: &[&str]) {
@@ -11,10 +25,12 @@ pub fn cmd_ps(_args: &[&str]) {
     );
     for p in &procs {
         let name = core::str::from_utf8(&p.name[..p.name_len]).unwrap_or("?");
+        color_for_state(p.state);
         println!(
             "{:>5} {:8} {:>10} {:>5} {:>10}",
             p.pid, name, p.state, p.priority.0, p.cpu_time_ticks
         );
+        minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
     }
     super::journey::mark(super::journey::STEP_PS);
 }
@@ -77,9 +93,11 @@ pub fn cmd_top(_args: &[&str]) {
     );
     for p in &procs {
         let name = core::str::from_utf8(&p.name[..p.name_len]).unwrap_or("?");
+        color_for_state(p.state);
         println!(
             "{:>5} {:8} {:>10} {:>5} {:>10}",
             p.pid, name, p.state, p.priority.0, p.cpu_time_ticks
         );
+        minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
     }
 }
