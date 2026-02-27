@@ -21,6 +21,7 @@
     <nav id="tab-bar" class="tab-bar">
       <button class="active" data-tab="waterfall">Waterfall</button>
       <button data-tab="stats">Stats</button>
+      <button data-tab="dashboard">Dashboard</button>
     </nav>
 
     <div id="waterfall-panel" class="panel">
@@ -30,6 +31,16 @@
     <div id="stats-panel" class="panel" style="display:none">
       <div id="stats-body"></div>
     </div>
+
+    <div id="dashboard-panel" class="panel" style="display:none">
+      <div id="dashboard-view">
+        <h2>System Dashboard</h2>
+        <p>Paste the output of <code>cat /proc/dashboard</code> below:</p>
+        <textarea id="dashboard-input" rows="12" cols="50" placeholder="uptime_ticks: 5000&#10;memory_frames_free: 63000&#10;..."></textarea>
+        <button onclick="renderDashboard()">Render</button>
+        <div id="dashboard-output"></div>
+      </div>
+    </div>
   </div>
 
   <div id="tooltip"></div>
@@ -37,6 +48,7 @@
   <script src="js/utils.js"></script>
   <script src="js/parser.js"></script>
   <script src="js/waterfall.js"></script>
+  <script src="js/dashboard.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

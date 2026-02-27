@@ -8,6 +8,7 @@
 extern crate alloc;
 
 pub mod mlfq;
+pub mod round_robin;
 
 pub use mlfq::MlfqScheduler;
 

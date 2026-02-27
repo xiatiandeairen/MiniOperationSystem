@@ -5,6 +5,7 @@ pub mod basic;
 pub mod bench;
 pub mod compare;
 pub mod crash;
+pub mod dashboard;
 pub mod env_cmds;
 pub mod errors;
 pub mod explain;
@@ -343,6 +344,11 @@ static COMMANDS: &[Command] = &[
         name: "trap",
         description: "Trigger int 0x80 to prove IDT dispatch works",
         handler: basic::cmd_trap,
+    },
+    Command {
+        name: "dashboard",
+        description: "Show comprehensive real-time system dashboard",
+        handler: dashboard::cmd_dashboard,
     },
 ];
 

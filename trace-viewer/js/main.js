@@ -6,15 +6,16 @@ let chart      = null;
 let traceData  = null;
 
 /* ---- DOM refs ---- */
-const dropZone   = document.getElementById('drop-zone');
-const fileInput  = document.getElementById('file-input');
-const tabBar     = document.getElementById('tab-bar');
-const waterfall  = document.getElementById('waterfall-panel');
-const statsPanel = document.getElementById('stats-panel');
-const canvas     = document.getElementById('waterfall-canvas');
-const tooltip    = document.getElementById('tooltip');
-const statsBody  = document.getElementById('stats-body');
-const statusMsg  = document.getElementById('status-msg');
+const dropZone       = document.getElementById('drop-zone');
+const fileInput      = document.getElementById('file-input');
+const tabBar         = document.getElementById('tab-bar');
+const waterfall      = document.getElementById('waterfall-panel');
+const statsPanel     = document.getElementById('stats-panel');
+const dashboardPanel = document.getElementById('dashboard-panel');
+const canvas         = document.getElementById('waterfall-canvas');
+const tooltip        = document.getElementById('tooltip');
+const statsBody      = document.getElementById('stats-body');
+const statusMsg      = document.getElementById('status-msg');
 
 /* ---- tabs ---- */
 tabBar.addEventListener('click', e => {
@@ -23,8 +24,9 @@ tabBar.addEventListener('click', e => {
   tabBar.querySelectorAll('button').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const tab = btn.dataset.tab;
-  waterfall.style.display  = tab === 'waterfall' ? 'block' : 'none';
-  statsPanel.style.display = tab === 'stats'     ? 'block' : 'none';
+  waterfall.style.display      = tab === 'waterfall' ? 'block' : 'none';
+  statsPanel.style.display     = tab === 'stats'     ? 'block' : 'none';
+  dashboardPanel.style.display = tab === 'dashboard' ? 'block' : 'none';
   if (tab === 'waterfall' && chart) chart.render();
 });
 

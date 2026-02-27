@@ -26,6 +26,7 @@ pub fn cmd_lab(args: &[&str]) {
         "page-table-walk" | "3" => lab_page_table_walk(),
         "trace-overhead" | "4" => lab_trace_overhead(),
         "fs-operations" | "5" => lab_fs_operations(),
+        "scheduler-compare" | "6" => lab_scheduler_compare(),
         _ => println!("Unknown lab. Type 'lab list' to see available labs."),
     }
     if args[0] != "list" {
@@ -41,6 +42,7 @@ fn lab_list() {
     println!("  3. page-table-walk     — Manually translate a virtual address");
     println!("  4. trace-overhead      — Measure the cost of tracing");
     println!("  5. fs-operations       — Create, write, read, delete a file");
+    println!("  6. scheduler-compare   — Compare MLFQ vs Round-Robin algorithms");
     println!();
     println!("Run a lab: lab <name>  or  lab <number>");
 }
@@ -323,6 +325,51 @@ fn lab_fs_operations() {
     println!("  → A small integer (index) into a per-process table of open files.");
     println!("  → It maps to an inode + current read/write offset.");
     println!("  → Closing releases the table entry for reuse.");
+    println!();
+    println!("✅ Lab complete!");
+}
+
+fn lab_scheduler_compare() {
+    use minios_common::id::Pid;
+    use minios_common::types::Priority;
+
+    println!("=== Lab: Scheduler Algorithm Comparison ===");
+    println!();
+
+    let mut mlfq = minios_scheduler::mlfq::MlfqScheduler::new();
+    mlfq.add_task(Pid(10), Priority::HIGH);
+    mlfq.add_task(Pid(11), Priority::LOW);
+    mlfq.set_running(Pid(10), 0);
+    for _ in 0..50 {
+        mlfq.tick();
+    }
+    let mlfq_stats = mlfq.stats();
+
+    let mut rr = minios_scheduler::round_robin::RoundRobinScheduler::new(5);
+    rr.add_task(Pid(10));
+    rr.add_task(Pid(11));
+    for _ in 0..50 {
+        rr.tick();
+    }
+    let rr_stats = rr.stats();
+
+    println!("After 50 ticks with 2 tasks:");
+    println!("  {:16} {:>10} {:>10}", "", "MLFQ", "Round-Robin");
+    println!(
+        "  {:16} {:>10} {:>10}",
+        "Switches", mlfq_stats.total_switches, rr_stats.total_switches
+    );
+    println!(
+        "  {:16} {:>10} {:>10}",
+        "Total ticks", mlfq_stats.total_ticks, rr_stats.total_ticks
+    );
+    println!();
+    println!("Observation: MLFQ switches more because high-priority tasks");
+    println!("have shorter time slices. Round-Robin treats all tasks equally.");
+    println!();
+    println!("Trade-off:");
+    println!("  MLFQ   — responsive for interactive tasks, complex rules");
+    println!("  RR     — simple and fair, but no priority differentiation");
     println!();
     println!("✅ Lab complete!");
 }

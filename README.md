@@ -35,6 +35,11 @@ MiniOS $ journey            ← track your learning progress
 
 Type `help` to see all commands. Type `explain <cmd>` to learn how any command works.
 
+## Zero-Setup with Docker
+```bash
+docker build -t minios . && docker run -it --rm minios
+```
+
 ## Prerequisites
 
 - Rust nightly (`rust-toolchain.toml` handles this)
