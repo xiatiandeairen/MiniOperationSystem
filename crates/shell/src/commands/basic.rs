@@ -456,6 +456,97 @@ pub fn cmd_faq(_args: &[&str]) {
     println!("   memory management, process scheduling, and a filesystem.");
 }
 
+/// Prints a feedback prompt directing users to the project's issue tracker.
+///
+/// ```text
+/// feedback   — display feedback instructions and session summary
+/// ```
+pub fn cmd_feedback(_args: &[&str]) {
+    println!("=== Help Us Improve MiniOS ===");
+    println!();
+    println!("Thank you for using MiniOS! Your feedback matters.");
+    println!();
+    println!("Please tell us:");
+    println!("  1. What was the most valuable thing you learned?");
+    println!("  2. What was confusing or unclear?");
+    println!("  3. What feature would you add?");
+    println!("  4. Would you recommend MiniOS? (1-5)");
+    println!();
+    println!("Share feedback via GitHub Issues:");
+    println!("  https://github.com/xiatiandeairen/MiniOperationSystem/issues");
+    println!();
+    println!("Your journey progress:");
+    let done = crate::commands::journey::completed_count();
+    println!("  {}/17 learning steps completed", done);
+    let cmds = crate::shell::HISTORY.lock().len();
+    println!("  {} commands executed this session", cmds);
+}
+
+/// Displays session statistics: command count, journey progress, uptime.
+///
+/// ```text
+/// stats   — show session statistics
+/// ```
+pub fn cmd_stats(_args: &[&str]) {
+    let cmds = crate::shell::COMMAND_COUNT.load(core::sync::atomic::Ordering::Relaxed);
+    let journey = crate::commands::journey::completed_count();
+    let uptime = minios_hal::interrupts::tick_count();
+    println!("=== Session Statistics ===");
+    println!("  Commands executed: {}", cmds);
+    println!("  Journey progress:  {}/17", journey);
+    println!("  Session uptime:    {} ticks (~{}s)", uptime, uptime / 100);
+}
+
+/// Demonstrates the int 0x80 syscall mechanism conceptually.
+pub fn cmd_syscall_demo(_args: &[&str]) {
+    println!("=== System Call Mechanism Demo ===");
+    println!();
+    println!("How MiniOS syscalls work (current: function call):");
+    println!("  1. Shell calls minios_syscall::dispatch(num, arg1, arg2, arg3)");
+    println!("  2. Dispatcher matches syscall number \u{2192} calls handler");
+    println!("  3. Handler returns result to Shell");
+    println!();
+    println!("How Linux syscalls work (via int 0x80 / syscall instruction):");
+    println!("  1. User puts syscall number in RAX, args in RDI/RSI/RDX");
+    println!("  2. 'syscall' instruction traps to kernel (Ring 3 \u{2192} Ring 0)");
+    println!("  3. IDT vector 0x80 handler reads registers");
+    println!("  4. Dispatcher runs, result goes in RAX");
+    println!("  5. 'sysret' returns to user space (Ring 0 \u{2192} Ring 3)");
+    println!();
+    println!("Key difference: privilege level transition.");
+    println!("  MiniOS: everything runs in Ring 0 (kernel mode).");
+    println!("  Linux:  user code runs in Ring 3, traps to Ring 0 for syscalls.");
+    println!("  This isolation prevents user code from corrupting the kernel.");
+    println!();
+
+    let pid = minios_syscall::dispatch(minios_syscall::SYS_GETPID, 0, 0, 0);
+    println!("Live demo: sys_getpid() returned PID {}", pid);
+
+    let uptime = minios_syscall::dispatch(minios_syscall::SYS_UPTIME, 0, 0, 0);
+    println!("Live demo: sys_uptime() returned {} ticks", uptime);
+}
+
+/// Triggers int 0x80 to demonstrate real CPU interrupt dispatch via the IDT.
+pub fn cmd_trap(_args: &[&str]) {
+    println!("Triggering int 0x80 (software interrupt)...");
+    let before = minios_hal::interrupts::syscall_trap_count();
+
+    // SAFETY: int 0x80 is registered in the IDT; this is a controlled software interrupt.
+    unsafe {
+        core::arch::asm!("int 0x80");
+    }
+
+    let after = minios_hal::interrupts::syscall_trap_count();
+    println!(
+        "int 0x80 handled! Trap count: {} \u{2192} {}",
+        before, after
+    );
+    println!();
+    println!("This proves the IDT entry for vector 0x80 is registered");
+    println!("and the CPU correctly dispatches to our handler.");
+    println!("A full implementation would read RAX for the syscall number.");
+}
+
 /// Prints a structured course outline for using MiniOS as a teaching tool.
 pub fn cmd_syllabus(_args: &[&str]) {
     println!("=== MiniOS Operating Systems Syllabus ===");
