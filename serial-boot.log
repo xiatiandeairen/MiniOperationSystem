@@ -1,0 +1,64 @@
+c[?7l[2J[0mSeaBIOS (version 1.16.3-debian-1.16.3-2)
+
+
+iPXE (https://ipxe.org) 00:03.0 CA00 PCI2.10 PnP PMM+0EFCAF60+0EF0AF60 CA00
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...                                                                               
+
+
+Booting from Hard Disk...
+ -> SECOND STAGE
+stage 3 loaded at 0x00100000
+stage 4 loaded at 0x00130000
+loading kernel...
+kernel loaded at 0x01000000
+Loading ramdisk...
+No ramdisk found, skipping.
+[E820MemoryRegion { start_addr: 0, len: 9fc00, region_type: 1, acpi_extended_att
+ributes: 0 }, E820MemoryRegion { start_addr: 9fc00, len: 400, region_type: 2, ac
+pi_extended_attributes: 0 }, E820MemoryRegion { start_addr: f0000, len: 10000, r
+egion_type: 2, acpi_extended_attributes: 0 }, E820MemoryRegion { start_addr: 100
+000, len: fee0000, region_type: 1, acpi_extended_attributes: 0 }, E820MemoryRegi
+on { start_addr: ffe0000, len: 20000, region_type: 2, acpi_extended_attributes: 
+0 }, E820MemoryRegion { start_addr: fffc0000, len: 40000, region_type: 2, acpi_e
+xtended_attributes: 0 }, E820MemoryRegion { start_addr: fd00000000, len: 3000000
+00, region_type: 2, acpi_extended_attributes: 0 }]
+VESA MODE: 1280x72INFO : Framebuffer info: FrameBufferInfo { byte_len: 2764800, width: 1280, height: 720, pixel_format: Bgr, bytes_per_pixel: 3, stride: 1280 }
+INFO : 4th Stage
+INFO : BiosInfo { stage_4: Region { start: 130000, len: 242f0 }, kernel: Region { start: 1000000, len: 102690 }, ramdisk: Region { start: 1103000, len: 0 }, config_file: Region { start: 1103000, len: 0 }, last_used_addr: 1102fff, framebuffer: BiosFramebufferInfo { region: Region { start: fd000000, len: 2a3000 }, width: 500, height: 2d0, bytes_per_pixel: 3, stride: 500, pixel_format: Bgr }, memory_map_addr: 11cb0, memory_map_len: 7 }
+INFO : BIOS boot
+INFO : Elf file loaded at Pointer {
+    addr: 0x0000000001000000,
+    metadata: 1058448,
+}
+INFO : virtual_address_offset: 0x10000000000
+INFO : Handling Segment: Ph64(ProgramHeader64 { type_: Ok(Load), flags: Flags(4), offset: 0, virtual_addr: 0, physical_addr: 0, file_size: 11a34, mem_size: 11a34, align: 1000 })
+INFO : Handling Segment: Ph64(ProgramHeader64 { type_: Ok(Load), flags: Flags(5), offset: 11a34, virtual_addr: 12a34, physical_addr: 12a34, file_size: 1ea51, mem_size: 1ea51, align: 1000 })
+INFO : Handling Segment: Ph64(ProgramHeader64 { type_: Ok(Load), flags: Flags(6), offset: 30488, virtual_addr: 32488, physical_addr: 32488, file_size: 2c90, mem_size: 3b78, align: 1000 })
+INFO : Mapping bss section
+INFO : Handling Segment: Ph64(ProgramHeader64 { type_: Ok(Load), flags: Flags(6), offset: 33120, virtual_addr: 36120, physical_addr: 36120, file_size: be298, mem_size: c70f0, align: 1000 })
+INFO : Mapping bss section
+INFO : Entry point at: 0x10000013c67
+INFO : Creating GDT at PhysAddr(0x119d000)
+INFO : Map framebuffer
+INFO : Map physical memory
+INFO : Allocate bootinfo
+INFO : Create Memory Map
+INFO : Create bootinfo
+INFO : Jumping to kernel entry point at VirtAddr(0x10000013c67)
+[BOOT] HAL initialized (GDT, IDT, serial)
+[BOOT] Framebuffer initialized
+[BOOT] Banner displayed
+[INFO ] [memory] heap initialized: 1048576 bytes at 0x444444440000
+[BOOT] Memory subsystem initialized
+[BOOT] Filesystem initialized
+[INFO ] [process] created task 'idle' with PID 0
+[INFO ] [process] created task 'shell' with PID 1
+[BOOT] Process manager initialized
+[BOOT] Interrupts enabled, scheduler active
+Shell started
+[INFO ] [scheduler] priority boost: all tasks moved to queue 0
+[INFO ] [scheduler] priority boost: all tasks moved to queue 0
+[INFO ] [scheduler] priority boost: all tasks moved to queue 0
+[INFO ] [scheduler] priority boost: all tasks moved to queue 0
+[INFO ] [scheduler] priority boost: all tasks moved to queue 0
+qemu-system-x86_64: terminating on signal 15 from pid 377285 (timeout)

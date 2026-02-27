@@ -7,7 +7,6 @@ members = [
     "crates/trace",
     "crates/trace-macros",
     "crates/memory",
-    "crates/interrupt",
     "crates/process",
     "crates/scheduler",
     "crates/fs",

@@ -6,6 +6,7 @@ pub mod bench;
 pub mod compare;
 pub mod crash;
 pub mod dashboard;
+pub mod debug_cmds;
 pub mod env_cmds;
 pub mod errors;
 pub mod explain;
@@ -17,6 +18,7 @@ pub mod mem_cmds;
 pub mod proc_cmds;
 pub mod quiz;
 pub mod sched_cmds;
+pub mod system;
 pub mod text;
 pub mod trace_cmds;
 pub mod tutorial;
@@ -48,17 +50,17 @@ static COMMANDS: &[Command] = &[
     Command {
         name: "uptime",
         description: "Show tick count since boot",
-        handler: basic::cmd_uptime,
+        handler: system::cmd_uptime,
     },
     Command {
         name: "meminfo",
         description: "Show memory statistics",
-        handler: basic::cmd_meminfo,
+        handler: system::cmd_meminfo,
     },
     Command {
         name: "interrupts",
         description: "Show interrupt statistics",
-        handler: basic::cmd_interrupts,
+        handler: system::cmd_interrupts,
     },
     Command {
         name: "ls",
@@ -223,12 +225,12 @@ static COMMANDS: &[Command] = &[
     Command {
         name: "log",
         description: "Control kernel log system (level, module, history)",
-        handler: basic::cmd_log,
+        handler: debug_cmds::cmd_log,
     },
     Command {
         name: "debug",
         description: "Toggle debug mode (on|off|status)",
-        handler: basic::cmd_debug,
+        handler: debug_cmds::cmd_debug,
     },
     Command {
         name: "journey",
@@ -268,7 +270,7 @@ static COMMANDS: &[Command] = &[
     Command {
         name: "safety",
         description: "Show unsafe code audit summary",
-        handler: basic::cmd_safety,
+        handler: system::cmd_safety,
     },
     Command {
         name: "report",
@@ -283,17 +285,17 @@ static COMMANDS: &[Command] = &[
     Command {
         name: "snapshot",
         description: "Save or diff system state snapshots",
-        handler: basic::cmd_snapshot,
+        handler: system::cmd_snapshot,
     },
     Command {
         name: "version",
         description: "Show MiniOS version and system information",
-        handler: basic::cmd_version,
+        handler: system::cmd_version,
     },
     Command {
         name: "sleep",
         description: "Sleep for N ticks (default 100)",
-        handler: basic::cmd_sleep,
+        handler: system::cmd_sleep,
     },
     Command {
         name: "quiz",
@@ -333,17 +335,17 @@ static COMMANDS: &[Command] = &[
     Command {
         name: "stats",
         description: "Show session statistics (commands, progress, uptime)",
-        handler: basic::cmd_stats,
+        handler: system::cmd_stats,
     },
     Command {
         name: "syscall_demo",
         description: "Explain and demo the int 0x80 syscall mechanism",
-        handler: basic::cmd_syscall_demo,
+        handler: debug_cmds::cmd_syscall_demo,
     },
     Command {
         name: "trap",
         description: "Trigger int 0x80 to prove IDT dispatch works",
-        handler: basic::cmd_trap,
+        handler: debug_cmds::cmd_trap,
     },
     Command {
         name: "dashboard",

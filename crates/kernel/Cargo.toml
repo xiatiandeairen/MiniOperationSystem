@@ -10,7 +10,6 @@ minios-hal = { path = "../hal" }
 minios-trace = { path = "../trace" }
 minios-trace-macros = { path = "../trace-macros" }
 minios-memory = { path = "../memory" }
-minios-interrupt = { path = "../interrupt" }
 minios-process = { path = "../process" }
 minios-scheduler = { path = "../scheduler" }
 minios-fs = { path = "../fs" }

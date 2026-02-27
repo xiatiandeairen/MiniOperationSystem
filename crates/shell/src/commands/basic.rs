@@ -1,13 +1,9 @@
-//! Basic shell commands: help, echo, clear, uptime, meminfo.
+//! Basic shell commands: help, echo, clear, cheatsheet, faq, feedback,
+//! history, scripting utilities, and learning aids.
 
 extern crate alloc;
 
-use core::sync::atomic::{AtomicU64, Ordering};
 use minios_hal::println;
-
-static SNAPSHOT_FRAMES: AtomicU64 = AtomicU64::new(0);
-static SNAPSHOT_HEAP: AtomicU64 = AtomicU64::new(0);
-static SNAPSHOT_TICK: AtomicU64 = AtomicU64::new(0);
 
 /// Lists all available commands with descriptions.
 pub fn cmd_help(_args: &[&str]) {
@@ -40,56 +36,6 @@ pub fn cmd_clear(_args: &[&str]) {
     });
 }
 
-/// Shows uptime in human-readable minutes and seconds.
-pub fn cmd_uptime(_args: &[&str]) {
-    let ticks = minios_hal::interrupts::tick_count();
-    let seconds = ticks / 100;
-    let minutes = seconds / 60;
-    println!("Uptime: {}m {}s ({} ticks)", minutes, seconds % 60, ticks);
-    super::journey::mark(super::journey::STEP_UPTIME);
-}
-
-/// Sleeps for the specified number of ticks (default 100).
-pub fn cmd_sleep(args: &[&str]) {
-    let ticks = if args.is_empty() {
-        100
-    } else {
-        args[0]
-            .bytes()
-            .fold(0u64, |a, b| {
-                if b.is_ascii_digit() {
-                    a * 10 + (b - b'0') as u64
-                } else {
-                    a
-                }
-            })
-            .max(1)
-    };
-    let start = minios_hal::interrupts::tick_count();
-    println!("Sleeping for {} ticks...", ticks);
-    while minios_hal::interrupts::tick_count() - start < ticks {
-        minios_hal::cpu::hlt();
-    }
-    println!(
-        "Awake! (slept {} ticks)",
-        minios_hal::interrupts::tick_count() - start
-    );
-}
-
-/// Shows interrupt statistics (timer and keyboard counters).
-pub fn cmd_interrupts(_args: &[&str]) {
-    let stats = minios_hal::interrupts::interrupt_stats();
-    let uptime_secs = stats.timer_count / 100;
-    println!("IRQ  NAME       COUNT     RATE");
-    println!("0    Timer      {:<9} ~100/s", stats.timer_count);
-    println!("1    Keyboard   {:<9} on-demand", stats.keyboard_count);
-    println!();
-    println!(
-        "Uptime: ~{} seconds ({} ticks)",
-        uptime_secs, stats.timer_count
-    );
-}
-
 /// Lists the command history buffer.
 pub fn cmd_history(_args: &[&str]) {
     let hist = crate::shell::HISTORY.lock();
@@ -99,186 +45,6 @@ pub fn cmd_history(_args: &[&str]) {
             println!("  {}  {}", i + 1, entry);
         }
     }
-}
-
-/// Displays memory statistics (frame allocator + heap).
-pub fn cmd_meminfo(_args: &[&str]) {
-    let stats = minios_memory::get_stats();
-    println!(
-        "Frames: {} free / {} total ({} KiB free)",
-        stats.free_frames,
-        stats.total_frames,
-        stats.free_frames * 4,
-    );
-    println!(
-        "Heap:   {} used / {} free",
-        stats.heap_used, stats.heap_free
-    );
-    super::journey::mark(super::journey::STEP_MEMINFO);
-}
-
-/// Controls the kernel log system.
-pub fn cmd_log(args: &[&str]) {
-    if args.is_empty() {
-        println!("Usage: log <level|module|history|off> [value]");
-        println!("  log level <error|warn|info|debug|trace>");
-        println!("  log module <name|all>");
-        println!("  log history [count]");
-        println!("  log off");
-        println!(
-            "Current: level={}, module=all",
-            minios_hal::log::current_level().as_str()
-        );
-        return;
-    }
-    match args[0] {
-        "level" => {
-            if args.len() < 2 {
-                println!("Current: {}", minios_hal::log::current_level().as_str());
-                return;
-            }
-            match minios_hal::log::LogLevel::from_str(args[1]) {
-                Some(l) => {
-                    minios_hal::log::set_level(l);
-                    println!("Log level: {}", l.as_str());
-                }
-                None => println!("Unknown level. Use: error, warn, info, debug, trace"),
-            }
-        }
-        "module" => {
-            if args.len() < 2 {
-                println!("Usage: log module <name|all>");
-                return;
-            }
-            minios_hal::log::set_module_filter(args[1]);
-            println!("Log module filter: {}", args[1]);
-        }
-        "history" => {
-            let count = if args.len() > 1 {
-                args[1]
-                    .bytes()
-                    .fold(0usize, |acc, b| {
-                        if b.is_ascii_digit() {
-                            acc * 10 + (b - b'0') as usize
-                        } else {
-                            acc
-                        }
-                    })
-                    .max(1)
-            } else {
-                20
-            };
-            let entries = minios_hal::log::recent_logs(count);
-            for e in &entries {
-                println!(
-                    "[{}] [{}] {}",
-                    e.level.as_str(),
-                    e.module_str(),
-                    e.message_str()
-                );
-            }
-            if entries.is_empty() {
-                println!("(no log entries)");
-            }
-        }
-        "off" => {
-            minios_hal::log::set_level(minios_hal::log::LogLevel::Error);
-            println!("Logging minimized (errors only).");
-        }
-        _ => println!("Unknown log subcommand. Try: level, module, history, off"),
-    }
-}
-
-/// Toggles debug mode (trace-level logging for all modules).
-pub fn cmd_debug(args: &[&str]) {
-    if args.is_empty() || args[0] == "status" {
-        println!(
-            "Debug mode: log level = {}",
-            minios_hal::log::current_level().as_str()
-        );
-        return;
-    }
-    match args[0] {
-        "on" => {
-            minios_hal::log::set_level(minios_hal::log::LogLevel::Trace);
-            minios_hal::log::set_module_filter("all");
-            println!("Debug mode ON — all logs visible (level=TRACE, module=all)");
-        }
-        "off" => {
-            minios_hal::log::set_level(minios_hal::log::LogLevel::Info);
-            minios_hal::log::set_module_filter("all");
-            println!("Debug mode OFF — normal logging (level=INFO)");
-        }
-        _ => println!("Usage: debug <on|off|status>"),
-    }
-}
-
-/// Displays MiniOS version and system information.
-pub fn cmd_version(_args: &[&str]) {
-    println!("MiniOS v1.0");
-    println!("Architecture: x86-64 (bare metal)");
-    println!("Shell commands: {}", super::list_commands().len());
-    println!("Subsystems: HAL, Trace, Memory, Process, Scheduler, FS, IPC, Syscall, Shell");
-    println!("Tests: 105+");
-    println!("Build: Rust nightly, bootloader_api 0.11");
-}
-
-/// Saves or diffs a system state snapshot for comparison over time.
-pub fn cmd_snapshot(args: &[&str]) {
-    if args.is_empty() || args[0] == "save" {
-        let stats = minios_memory::get_stats();
-        let tick = minios_hal::interrupts::tick_count();
-        SNAPSHOT_FRAMES.store(stats.free_frames as u64, Ordering::Relaxed);
-        SNAPSHOT_HEAP.store(stats.heap_used as u64, Ordering::Relaxed);
-        SNAPSHOT_TICK.store(tick, Ordering::Relaxed);
-        println!("Snapshot saved at tick {}", tick);
-    } else if args[0] == "diff" {
-        let old_frames = SNAPSHOT_FRAMES.load(Ordering::Relaxed);
-        let old_heap = SNAPSHOT_HEAP.load(Ordering::Relaxed);
-        let old_tick = SNAPSHOT_TICK.load(Ordering::Relaxed);
-        if old_tick == 0 {
-            println!("No snapshot saved. Use 'snapshot save' first.");
-            return;
-        }
-        let stats = minios_memory::get_stats();
-        let tick = minios_hal::interrupts::tick_count();
-        println!("=== State Diff (tick {} \u{2192} {}) ===", old_tick, tick);
-        let frame_diff = stats.free_frames as i64 - old_frames as i64;
-        let heap_diff = stats.heap_used as i64 - old_heap as i64;
-        println!(
-            "  Frames free: {} \u{2192} {} ({:+})",
-            old_frames, stats.free_frames, frame_diff
-        );
-        println!(
-            "  Heap used:   {} \u{2192} {} ({:+})",
-            old_heap, stats.heap_used, heap_diff
-        );
-        println!("  Ticks elapsed: {}", tick - old_tick);
-    } else {
-        println!("Usage: snapshot [save|diff]");
-    }
-}
-
-/// Prints an audit summary of unsafe code usage in MiniOS.
-pub fn cmd_safety(_args: &[&str]) {
-    println!("=== MiniOS Safety Audit ===");
-    println!();
-    println!("Unsafe code locations:");
-    println!("  hal/gdt.rs      \u{2014} GDT/TSS static stack (SAFETY: one-time init)");
-    println!("  hal/vga.rs      \u{2014} VGA buffer pointer (SAFETY: hardware-mapped)");
-    println!("  hal/framebuffer \u{2014} raw pointer to bootloader framebuffer");
-    println!("  hal/serial.rs   \u{2014} UART port I/O (SAFETY: standard COM1 address)");
-    println!("  hal/cpu.rs      \u{2014} inline asm for TSC/HLT (SAFETY: privileged ops)");
-    println!("  process/context \u{2014} switch_context_asm (SAFETY: callee-saved regs)");
-    println!("  memory/frame    \u{2014} bitmap from bootloader memory map");
-    println!("  memory/paging   \u{2014} page table from CR3 register");
-    println!("  memory/heap     \u{2014} heap init from raw pointer");
-    println!();
-    println!("Safety invariants:");
-    println!("  - All Mutex-protected data is Send+Sync");
-    println!("  - No unsafe in shell/fs/ipc/scheduler/syscall crates");
-    println!("  - Double-free protected in frame deallocator");
-    println!("  - ISR never acquires Mutex (deadlock prevention)");
 }
 
 /// Runs a command once for each item in a list.
@@ -457,10 +223,6 @@ pub fn cmd_faq(_args: &[&str]) {
 }
 
 /// Prints a feedback prompt directing users to the project's issue tracker.
-///
-/// ```text
-/// feedback   — display feedback instructions and session summary
-/// ```
 pub fn cmd_feedback(_args: &[&str]) {
     println!("=== Help Us Improve MiniOS ===");
     println!();
@@ -480,71 +242,6 @@ pub fn cmd_feedback(_args: &[&str]) {
     println!("  {}/17 learning steps completed", done);
     let cmds = crate::shell::HISTORY.lock().len();
     println!("  {} commands executed this session", cmds);
-}
-
-/// Displays session statistics: command count, journey progress, uptime.
-///
-/// ```text
-/// stats   — show session statistics
-/// ```
-pub fn cmd_stats(_args: &[&str]) {
-    let cmds = crate::shell::COMMAND_COUNT.load(core::sync::atomic::Ordering::Relaxed);
-    let journey = crate::commands::journey::completed_count();
-    let uptime = minios_hal::interrupts::tick_count();
-    println!("=== Session Statistics ===");
-    println!("  Commands executed: {}", cmds);
-    println!("  Journey progress:  {}/17", journey);
-    println!("  Session uptime:    {} ticks (~{}s)", uptime, uptime / 100);
-}
-
-/// Demonstrates the int 0x80 syscall mechanism conceptually.
-pub fn cmd_syscall_demo(_args: &[&str]) {
-    println!("=== System Call Mechanism Demo ===");
-    println!();
-    println!("How MiniOS syscalls work (current: function call):");
-    println!("  1. Shell calls minios_syscall::dispatch(num, arg1, arg2, arg3)");
-    println!("  2. Dispatcher matches syscall number \u{2192} calls handler");
-    println!("  3. Handler returns result to Shell");
-    println!();
-    println!("How Linux syscalls work (via int 0x80 / syscall instruction):");
-    println!("  1. User puts syscall number in RAX, args in RDI/RSI/RDX");
-    println!("  2. 'syscall' instruction traps to kernel (Ring 3 \u{2192} Ring 0)");
-    println!("  3. IDT vector 0x80 handler reads registers");
-    println!("  4. Dispatcher runs, result goes in RAX");
-    println!("  5. 'sysret' returns to user space (Ring 0 \u{2192} Ring 3)");
-    println!();
-    println!("Key difference: privilege level transition.");
-    println!("  MiniOS: everything runs in Ring 0 (kernel mode).");
-    println!("  Linux:  user code runs in Ring 3, traps to Ring 0 for syscalls.");
-    println!("  This isolation prevents user code from corrupting the kernel.");
-    println!();
-
-    let pid = minios_syscall::dispatch(minios_syscall::SYS_GETPID, 0, 0, 0);
-    println!("Live demo: sys_getpid() returned PID {}", pid);
-
-    let uptime = minios_syscall::dispatch(minios_syscall::SYS_UPTIME, 0, 0, 0);
-    println!("Live demo: sys_uptime() returned {} ticks", uptime);
-}
-
-/// Triggers int 0x80 to demonstrate real CPU interrupt dispatch via the IDT.
-pub fn cmd_trap(_args: &[&str]) {
-    println!("Triggering int 0x80 (software interrupt)...");
-    let before = minios_hal::interrupts::syscall_trap_count();
-
-    // SAFETY: int 0x80 is registered in the IDT; this is a controlled software interrupt.
-    unsafe {
-        core::arch::asm!("int 0x80");
-    }
-
-    let after = minios_hal::interrupts::syscall_trap_count();
-    println!(
-        "int 0x80 handled! Trap count: {} \u{2192} {}",
-        before, after
-    );
-    println!();
-    println!("This proves the IDT entry for vector 0x80 is registered");
-    println!("and the CPU correctly dispatches to our handler.");
-    println!("A full implementation would read RAX for the syscall number.");
 }
 
 /// Prints a structured course outline for using MiniOS as a teaching tool.
