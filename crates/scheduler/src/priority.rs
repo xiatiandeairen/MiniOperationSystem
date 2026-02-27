@@ -14,6 +14,12 @@ pub struct PriorityScheduler {
     total_switches: u64,
 }
 
+impl Default for PriorityScheduler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PriorityScheduler {
     pub fn new() -> Self {
         Self {

@@ -16,7 +16,11 @@ pub struct BuddyAllocator {
 impl BuddyAllocator {
     /// Creates a new buddy allocator managing `total_frames` frames.
     pub fn new(total_frames: usize) -> Self {
-        let max_order = (total_frames as f64).log2() as usize;
+        let max_order = if total_frames <= 1 {
+            0
+        } else {
+            (usize::BITS - (total_frames - 1).leading_zeros()) as usize
+        };
         let max_order = max_order.min(15);
         let mut alloc = Self {
             max_order,
@@ -36,7 +40,7 @@ impl BuddyAllocator {
         for o in order..=self.max_order {
             if let Some(block) = self.free_lists[o].pop() {
                 let mut current_order = o;
-                let mut addr = block;
+                let addr = block;
                 while current_order > order {
                     current_order -= 1;
                     let buddy = addr + (1u64 << current_order);

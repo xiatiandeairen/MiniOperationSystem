@@ -15,6 +15,12 @@ pub struct FifoScheduler {
     total_switches: u64,
 }
 
+impl Default for FifoScheduler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FifoScheduler {
     pub const fn new() -> Self {
         Self {
