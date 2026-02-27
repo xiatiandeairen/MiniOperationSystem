@@ -72,7 +72,27 @@ pub fn cmd_sched(args: &[&str]) {
     match sub {
         "status" | "" => sched_status(),
         "config" => sched_config(&args[1..]),
-        _ => println!("Usage: sched [status|config [boost <N>]]"),
+        "trace" => cmd_sched_trace(&args[1..]),
+        _ => println!("Usage: sched [status|config [boost <N>]|trace]"),
+    }
+}
+
+pub fn cmd_sched_trace(_args: &[&str]) {
+    println!("=== Scheduler Decision Trace (last 10) ===");
+    println!();
+    let mut buf: [minios_trace::Span; 20] = core::array::from_fn(|_| minios_trace::Span::default());
+    let n = minios_trace::TRACER.read_recent(20, &mut buf);
+    let mut shown = 0;
+    for span in &buf[..n] {
+        if span.module_str() == "scheduler" && shown < 10 {
+            let duration = span.end_tsc.saturating_sub(span.start_tsc);
+            println!("  [tick] {} ({} cycles)", span.name_str(), duration);
+            shown += 1;
+        }
+    }
+    if shown == 0 {
+        println!("  (no scheduler spans recorded)");
+        println!("  Tip: 'log level debug' enables scheduler logging.");
     }
 }
 
