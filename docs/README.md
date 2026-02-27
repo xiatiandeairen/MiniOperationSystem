@@ -1,40 +1,46 @@
-# docs/ 文档目录
+# docs/ — Documentation Index
 
-## 目录结构
+## Key Documents
+
+| Document | Description |
+|----------|-------------|
+| [../spec.md](../spec.md) | Full technical specification |
+| [../CONTRIBUTING.md](../CONTRIBUTING.md) | Contributor guide |
+| [../CHANGELOG.md](../CHANGELOG.md) | Release changelog |
+| [comparison.md](comparison.md) | MiniOS vs Linux design comparison |
+| [user-testing-guide.md](user-testing-guide.md) | How to test MiniOS as a learner |
+| [web-integration-guide.md](web-integration-guide.md) | Web-based integration notes |
+
+## Directory Structure
 
 ```
 docs/
-├── README.md                    ← 本文件: 文档索引
-├── releases/                    ← 版本发布说明 (精华特性)
-│   ├── v0.1.0.md
-│   ├── v0.2.0.md
-│   └── v0.2.0-roadmap.md
-├── changelogs/                  ← 版本开发变更全记录 (编号归档)
-│   ├── v0.1.0-changelog.md
-│   └── v0.2.0-changelog.md
-├── dev-logs/                    ← 版本开发过程记录 (编号归档)
-│   ├── v0.1.0-tasks.md          ← AI Coding 任务完成情况
-│   ├── v0.1.0-insights.md       ← 开发数据和 ROI 分析
-│   ├── v0.2.0-tasks.md
-│   └── v0.2.0-insights.md
-└── adr/                         ← 架构决策记录 (编号归档)
+├── README.md                ← This file: documentation index
+├── comparison.md            ← MiniOS vs Linux design comparison
+├── user-testing-guide.md    ← Learner testing guide
+├── web-integration-guide.md ← Web integration notes
+├── releases/                ← Version release notes
+│   ├── v0.1.0.md … v0.7.0.md
+│   └── v2.0.0-vision.md
+├── changelogs/              ← Detailed per-version changelogs
+│   └── v0.1.0 … v0.7.0
+├── dev-logs/                ← AI coding task logs and insights
+│   └── v0.1.0 … v0.7.0 (tasks + insights)
+├── audit/                   ← Code quality audits
+│   └── v2.2.0-full-audit.md
+├── tasks/                   ← Iteration planning
+│   ├── v08-v27-iteration-plan.md
+│   └── v28-v47-iteration-plan.md
+└── adr/                     ← Architecture Decision Records
     ├── 001-use-rust-nightly.md
     ├── 002-bootloader-api-crate.md
     └── 003-multi-crate-workspace.md
 ```
 
-## 文档编号规则
+## Architecture Decision Records (ADRs)
 
-- **Release Notes**: `releases/vX.Y.Z.md` — 面向用户的精华特性
-- **Changelog**: `changelogs/vX.Y.Z-changelog.md` — 全部开发变更，按 commit 粒度
-- **Tasks**: `dev-logs/vX.Y.Z-tasks.md` — AI Coding 任务 todolist (✅/❌/⬜)
-- **Insights**: `dev-logs/vX.Y.Z-insights.md` — 代码变更量、功能/bug 数、耗时、ROI
-- **ADR**: `adr/NNN-title.md` — 架构决策记录
-
-## 风险和待决策项
-
-不在文档中维护，通过 GitHub Issues 管理：
-- `label:risk` — 风险项
-- `label:decision` — 待决策项
-- `label:bug` — Bug
-- `label:enhancement` — 功能需求
+| ADR | Decision |
+|-----|----------|
+| [001](adr/001-use-rust-nightly.md) | Use Rust nightly for bare-metal features |
+| [002](adr/002-bootloader-api-crate.md) | Use `bootloader_api` crate for boot protocol |
+| [003](adr/003-multi-crate-workspace.md) | Multi-crate workspace architecture |
