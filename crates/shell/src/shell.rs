@@ -6,8 +6,12 @@ use crate::commands;
 use crate::input::LineBuffer;
 use crate::parser;
 use alloc::vec::Vec;
+use core::sync::atomic::{AtomicU32, Ordering};
 use minios_hal::{print, println, serial_println};
 use spin::Mutex;
+
+/// Counts the total number of commands dispatched this session.
+pub static COMMAND_COUNT: AtomicU32 = AtomicU32::new(0);
 
 // ---------------------------------------------------------------------------
 // Command history (ring buffer of 32 entries, each up to 256 bytes)
@@ -313,7 +317,10 @@ fn dispatch_line(line: &str) {
     }
 
     match commands::find_command(cmd_name) {
-        Some(command) => (command.handler)(args),
+        Some(command) => {
+            (command.handler)(args);
+            COMMAND_COUNT.fetch_add(1, Ordering::Relaxed);
+        }
         None => {
             let suggestion = find_similar(cmd_name);
             minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::RED);
