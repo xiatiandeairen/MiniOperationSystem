@@ -354,10 +354,7 @@ fn lab_scheduler_compare() {
     let rr_stats = rr.stats();
 
     println!("After 50 ticks with 2 tasks:");
-    println!(
-        "  {:16} {:>10} {:>10}",
-        "", "MLFQ", "Round-Robin"
-    );
+    println!("  {:16} {:>10} {:>10}", "", "MLFQ", "Round-Robin");
     println!(
         "  {:16} {:>10} {:>10}",
         "Switches", mlfq_stats.total_switches, rr_stats.total_switches

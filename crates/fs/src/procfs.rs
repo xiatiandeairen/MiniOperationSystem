@@ -22,6 +22,7 @@ pub fn read_procfs(path: &str) -> Result<Vec<u8>, FsError> {
         "/proc/scheduler" => Ok(generate_scheduler()),
         "/proc/version" => Ok(generate_version()),
         "/proc/trace" => Ok(generate_trace_stats()),
+        "/proc/dashboard" => Ok(generate_dashboard()),
         _ if path.starts_with("/proc/") && path.ends_with("/status") => {
             let pid_str = &path[6..path.len() - 7];
             let pid_num = pid_str.bytes().fold(0u32, |a, b| {
@@ -56,7 +57,7 @@ fn generate_process_status(pid: u32) -> Vec<u8> {
 pub fn stat_procfs(path: &str) -> Result<FileStat, FsError> {
     match path {
         "/proc/meminfo" | "/proc/uptime" | "/proc/interrupts" | "/proc/scheduler"
-        | "/proc/version" | "/proc/trace" | "/proc" => Ok(FileStat {
+        | "/proc/version" | "/proc/trace" | "/proc/dashboard" | "/proc" => Ok(FileStat {
             size: 0,
             inode_type: InodeType::Special,
             created_at: 0,
@@ -131,6 +132,35 @@ fn generate_version() -> Vec<u8> {
      Shell commands: 25+\n"
         .as_bytes()
         .to_vec()
+}
+
+fn generate_dashboard() -> Vec<u8> {
+    let mem = minios_memory::get_stats();
+    let int_stats = minios_hal::interrupts::interrupt_stats();
+    let sched = minios_scheduler::SCHEDULER.lock();
+    let stats = sched.stats();
+    drop(sched);
+    format!(
+        "uptime_ticks: {}\n\
+         memory_frames_free: {}\n\
+         memory_frames_total: {}\n\
+         heap_used: {}\n\
+         heap_free: {}\n\
+         scheduler_switches: {}\n\
+         scheduler_ticks: {}\n\
+         irq_timer: {}\n\
+         irq_keyboard: {}\n",
+        int_stats.timer_count,
+        mem.free_frames,
+        mem.total_frames,
+        mem.heap_used,
+        mem.heap_free,
+        stats.total_switches,
+        stats.total_ticks,
+        int_stats.timer_count,
+        int_stats.keyboard_count,
+    )
+    .into_bytes()
 }
 
 fn generate_trace_stats() -> Vec<u8> {
