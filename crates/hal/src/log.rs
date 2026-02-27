@@ -130,6 +130,13 @@ pub fn current_level() -> LogLevel {
     }
 }
 
+/// Returns the raw minimum log level as a `u8` for the `klog!` macro's
+/// early-exit check (avoids heap allocation when the message would be
+/// discarded anyway).
+pub fn min_level_raw() -> u8 {
+    MIN_LEVEL.load(Ordering::Relaxed)
+}
+
 /// Sets the module filter (empty string = show all).
 pub fn set_module_filter(module: &str) {
     let mut filter = MODULE_FILTER.lock();
@@ -184,10 +191,16 @@ pub fn recent_logs(count: usize) -> alloc::vec::Vec<LogEntry> {
 }
 
 /// The klog! macro for structured kernel logging.
+///
+/// Checks the log level BEFORE calling `format!` so that discarded
+/// messages never touch the heap allocator — critical during early
+/// boot when the heap is not yet initialised.
 #[macro_export]
 macro_rules! klog {
     ($level:ident, $module:expr, $($arg:tt)*) => {{
-        let msg = alloc::format!($($arg)*);
-        $crate::log::log($crate::log::LogLevel::$level, $module, &msg);
+        if ($crate::log::LogLevel::$level as u8) <= $crate::log::min_level_raw() {
+            let msg = alloc::format!($($arg)*);
+            $crate::log::log($crate::log::LogLevel::$level, $module, &msg);
+        }
     }};
 }

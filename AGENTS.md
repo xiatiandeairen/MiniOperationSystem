@@ -48,24 +48,16 @@ All tasks are defined in `Makefile.toml`. Run via `cargo make <task>`:
   debug mode. The kernel `BootloaderConfig` sets `kernel_stack_size = 512 KiB`.
   If you add subsystems with large stack frames, watch for double faults during
   boot — they almost always indicate stack overflow.
-- **QEMU boot testing**: Use the `boot-image` tool then QEMU directly, not
-  `cargo make run` (the Makefile's `run` task references a stale image name).
-  Debug builds with full debug info (~8 MB+) exceed the BIOS bootloader
-  stage-2 limit and panic during kernel load. Either use **release builds**
-  or **strip the debug binary** before creating the image:
+- **QEMU boot testing**: Use `cargo make run` for a one-command release
+  build + boot, or build and boot manually:
   ```
-  # Option A: release build
-  cargo build --workspace --release -Z build-std=core,compiler_builtins,alloc -Z build-std-features=compiler-builtins-mem
+  cargo make build-release
   ./tools/boot-image/target/x86_64-unknown-linux-gnu/release/boot-image target/x86_64-unknown-none/release/minios-kernel
   timeout 15 qemu-system-x86_64 -drive format=raw,file=target/x86_64-unknown-none/release/minios-bios.img -nographic -m 256M -no-reboot -no-shutdown
-
-  # Option B: stripped debug build (preserves debug compile behavior)
-  cargo make build
-  cp target/x86_64-unknown-none/debug/minios-kernel target/x86_64-unknown-none/debug/minios-kernel.stripped
-  strip target/x86_64-unknown-none/debug/minios-kernel.stripped
-  ./tools/boot-image/target/x86_64-unknown-linux-gnu/release/boot-image target/x86_64-unknown-none/debug/minios-kernel.stripped
-  timeout 15 qemu-system-x86_64 -drive format=raw,file=target/x86_64-unknown-none/debug/minios-bios.img -nographic -m 256M -no-reboot -no-shutdown
   ```
+  Debug builds with full debug info (~8 MB+) exceed the BIOS bootloader
+  stage-2 limit and panic during kernel load. Always use **release builds**
+  for QEMU testing.
 - **Shell keyboard input in QEMU**: The shell reads from the PS/2 keyboard
   scancode port (0x60). In `-nographic` mode, terminal input goes to serial,
   not the PS/2 keyboard. The shell will start but appear to hang waiting for
@@ -78,6 +70,19 @@ All tasks are defined in `Makefile.toml`. Run via `cargo make <task>`:
   compile fine but cannot execute. Only crates without a custom allocator
   (`minios-common`, `minios-trace`, `minios-scheduler`, `minios-ipc`) are
   testable on the host target.
+
+- **klog! and heap init**: The `klog!` macro checks the log level before
+  `format!()` to avoid heap allocation when the message would be discarded.
+  Any code that runs before `minios_memory::init()` must not call heap-allocating
+  functions. This includes `alloc::format!`, `alloc::vec!`, `Box::new`, etc.
+- **Multitasking architecture (v2.0)**: The Shell runs as a real scheduled task
+  (PID 1), not directly in `kernel_main`. Context switching is deferred: the
+  timer ISR sets `NEED_RESCHEDULE` / `NEXT_TASK_PID` flags, and the actual
+  switch happens at `hlt()` return points — safe yield points where no Mutex
+  is held. Never call `switch_context` inside an ISR.
+- **Host-side tests**: The `cargo make test` task runs in workspace mode which
+  fails. Use the direct command instead:
+  `cargo test -p minios-common -p minios-trace-macros -p minios-scheduler -p minios-ipc --target x86_64-unknown-linux-gnu`
 
 ### Development workflow
 

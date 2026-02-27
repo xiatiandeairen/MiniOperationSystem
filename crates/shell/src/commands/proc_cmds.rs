@@ -52,6 +52,45 @@ pub fn cmd_pstree(_args: &[&str]) {
     }
 }
 
+/// Repeats a command at regular intervals, showing scheduler progression.
+///
+/// Usage: `watch <command> [count]`
+pub fn cmd_watch(args: &[&str]) {
+    if args.is_empty() {
+        println!("Usage: watch <command> [count]");
+        return;
+    }
+    let cmd = args[0];
+    let count = args.get(1).and_then(|s| parse_u32(s)).unwrap_or(3) as usize;
+
+    for i in 0..count {
+        if i > 0 {
+            let start = minios_hal::interrupts::tick_count();
+            while minios_hal::interrupts::tick_count().wrapping_sub(start) < 100 {
+                minios_hal::cpu::hlt();
+            }
+        }
+        println!("--- watch {} ({}/{}) ---", cmd, i + 1, count);
+        let parsed = crate::parser::parse(cmd);
+        if !parsed.is_empty() {
+            if let Some(command) = crate::commands::find_command(parsed.command()) {
+                (command.handler)(parsed.args());
+            }
+        }
+    }
+}
+
+fn parse_u32(s: &str) -> Option<u32> {
+    let mut r: u32 = 0;
+    for b in s.bytes() {
+        if !b.is_ascii_digit() {
+            return None;
+        }
+        r = r.checked_mul(10)?.checked_add((b - b'0') as u32)?;
+    }
+    Some(r)
+}
+
 /// Shows a snapshot of system status (processes + memory + interrupts).
 pub fn cmd_top(_args: &[&str]) {
     let stats = minios_memory::get_stats();
