@@ -5,6 +5,7 @@ extern crate alloc;
 
 use bootloader_api::{config::Mapping, entry_point, BootInfo, BootloaderConfig};
 use core::panic::PanicInfo;
+use core::sync::atomic::Ordering;
 use minios_common::id::Pid;
 use minios_common::traits::fs::FileSystem;
 use minios_common::traits::trace::Tracer;
@@ -101,16 +102,29 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     minios_hal::framebuffer::set_color(minios_hal::framebuffer::colors::DEFAULT);
     minios_hal::println!("Boot successful. System ready.");
 
+    minios_hal::cpu::set_reschedule_callback(do_reschedule);
+
     minios_hal::interrupts::set_timer_callback(on_timer_tick);
     minios_hal::enable_interrupts();
 
     boot_progress("Interrupts enabled, scheduler active");
 
-    minios_shell::run_shell();
+    idle_loop();
+}
+
+/// Primary idle loop — entered by `kernel_main` after all init is done.
+///
+/// PID 0 (idle) is set as the current task before we get here.  On the
+/// first timer tick the scheduler will switch to PID 1 (shell) via the
+/// deferred-reschedule path inside `hlt()`.
+fn idle_loop() -> ! {
+    loop {
+        minios_hal::cpu::hlt();
+    }
 }
 
 fn boot_progress(step: &str) {
-    minios_hal::println!("[BOOT] {}", step);
+    minios_hal::serial_println!("[BOOT] {}", step);
 }
 
 /// Initialises the VFS, creates default directories, and runs a smoke test.
@@ -135,8 +149,10 @@ fn init_filesystem() {
     minios_fs::set_global_vfs(vfs);
 }
 
-/// Creates the idle task (PID 0) and init task (PID 1), registers them
-/// with the scheduler, and prints the initial process listing.
+/// Creates the idle task (PID 0) and shell task (PID 1), registers them
+/// with the scheduler, and sets idle as the initially running task.
+///
+/// The scheduler will switch to PID 1 (shell) on the first timer tick.
 fn init_processes() {
     use minios_process::manager;
     use minios_scheduler::SCHEDULER;
@@ -144,13 +160,14 @@ fn init_processes() {
     let idle_pid = manager::create_kernel_task("idle", idle_task, Priority::IDLE)
         .expect("failed to create idle task");
 
-    let init_pid = manager::create_kernel_task("init", init_task, Priority::HIGH)
-        .expect("failed to create init task");
+    let shell_pid = manager::create_kernel_task("shell", shell_task, Priority::HIGH)
+        .expect("failed to create shell task");
 
     {
         let mut sched = SCHEDULER.lock();
         sched.add_task(idle_pid, Priority::IDLE);
-        sched.add_task(init_pid, Priority::HIGH);
+        sched.add_task(shell_pid, Priority::HIGH);
+        sched.set_running(idle_pid, 3);
     }
 
     manager::set_current(idle_pid);
@@ -160,6 +177,10 @@ fn init_processes() {
 ///
 /// No trace spans here: the timer ISR fires while the main thread may
 /// hold the trace buffer Mutex, so calling trace_event! would deadlock.
+///
+/// Instead of switching context inside the ISR (unsafe with the
+/// x86-interrupt ABI), we set a flag that `hlt()` checks after the
+/// interrupt returns.
 fn on_timer_tick() {
     let _ticks = minios_hal::interrupts::tick_count();
     let current = minios_process::manager::current_pid();
@@ -170,26 +191,28 @@ fn on_timer_tick() {
     match decision {
         ScheduleDecision::Continue => {}
         ScheduleDecision::Switch(next_pid) => {
-            handle_switch(current, next_pid);
+            minios_hal::cpu::NEXT_TASK_PID.store(next_pid.0, Ordering::Relaxed);
+            minios_hal::cpu::NEED_RESCHEDULE.store(true, Ordering::Release);
         }
         ScheduleDecision::Idle => {}
     }
-
-    // Removed: noisy tick logging during normal operation
-    // Scheduler stats are available via 'sched' and 'cat /proc/scheduler' commands
 }
 
-/// Records a scheduling decision without performing a real context switch.
+/// Deferred reschedule callback — invoked by `hlt()` outside the ISR
+/// when the timer handler flagged that a context switch is needed.
+fn do_reschedule() {
+    let next = Pid(minios_hal::cpu::NEXT_TASK_PID.load(Ordering::Relaxed));
+    let current = minios_process::manager::current_pid();
+    if current != next {
+        do_switch(current, next);
+    }
+}
+
+/// Performs the actual cooperative context switch between two tasks.
 ///
-/// Real context switching (via `switch_context_asm`) is available but
-/// currently the Shell runs in `kernel_main` which is not a registered
-/// process. Preempting it would lose the Shell execution context.
-/// Instead we track scheduling decisions for observability while the
-/// Shell remains the active execution path.
-///
-/// When process isolation is added (future work), tasks will be switched
-/// using `minios_process::context::switch_context`.
-fn handle_switch(old_pid: Pid, new_pid: Pid) {
+/// Updates process states, scheduler bookkeeping, and then switches
+/// the CPU register context via the assembly stub.
+fn do_switch(old_pid: Pid, new_pid: Pid) {
     use minios_process::manager;
 
     let _ = manager::set_state(old_pid, ProcessState::Ready);
@@ -219,18 +242,19 @@ fn handle_switch(old_pid: Pid, new_pid: Pid) {
     }
 }
 
-/// Idle task — halts between interrupts, resumes when scheduled back.
+/// Idle task (PID 0) — halts between interrupts, resumes when
+/// scheduled back.  The deferred-reschedule check inside `hlt()` will
+/// yield to higher-priority tasks automatically.
 fn idle_task() {
     loop {
         minios_hal::cpu::hlt();
     }
 }
 
-/// Init task — runs the shell after printing a startup message.
-fn init_task() {
-    loop {
-        minios_hal::cpu::hlt();
-    }
+/// Shell task (PID 1) — a real scheduled task that runs the
+/// interactive shell.  `run_shell()` never returns.
+fn shell_task() {
+    minios_shell::run_shell();
 }
 
 /// Smoke-tests the syscall dispatcher with uptime and getpid calls.

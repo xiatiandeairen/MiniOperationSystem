@@ -16,9 +16,17 @@ fn parse_u32(s: &str) -> Option<u32> {
     Some(result)
 }
 
-/// Entry point for a background kernel task (loops halting).
+/// Entry point for a background kernel task.
+///
+/// Loops halting between interrupts.  Every 1000 wake-ups it logs a
+/// message to prove the task is actually being scheduled.
 fn background_task() {
+    let mut counter: u64 = 0;
     loop {
+        counter += 1;
+        if counter.is_multiple_of(1000) {
+            minios_hal::klog!(Info, "task", "background tick {}", counter / 1000);
+        }
         minios_hal::cpu::hlt();
     }
 }
