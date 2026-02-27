@@ -432,10 +432,7 @@ fn lab_scheduler_compare() {
         prio.tick();
     }
 
-    println!(
-        "After {} ticks with 2 tasks (HIGH + LOW priority):",
-        ticks
-    );
+    println!("After {} ticks with 2 tasks (HIGH + LOW priority):", ticks);
     println!("  {:12} {:>10} {:>10}", "", "Switches", "Fairness");
     println!(
         "  {:12} {:>10} {:>10}",
