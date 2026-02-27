@@ -1,4 +1,14 @@
-//! VGA text-mode display driver.
+// DEPRECATED: See framebuffer.rs for the active display driver.
+
+//! **DEPRECATED**: VGA text-mode display driver.
+//!
+//! This module targets the legacy VGA text buffer at 0xB8000.
+//! The bootloader_api v0.11 uses a pixel framebuffer instead.
+//! All output now goes through [`super::framebuffer`].
+//!
+//! Retained for reference — the `println!` macro routes through
+//! the framebuffer when available, falling back to VGA only if
+//! the framebuffer was not initialized.
 //!
 //! Provides a global [`WRITER`] that can output characters to the 80×25
 //! VGA text buffer at physical address `0xB8000`.
