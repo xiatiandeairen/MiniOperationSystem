@@ -391,46 +391,84 @@ fn lab_allocator_compare() {
 }
 
 fn lab_scheduler_compare() {
+    println!("=== Lab: Scheduler Algorithm Comparison (4-way) ===");
+    println!();
+
     use minios_common::id::Pid;
     use minios_common::types::Priority;
 
-    println!("=== Lab: Scheduler Algorithm Comparison ===");
-    println!();
+    let ticks = 50u64;
 
+    // MLFQ
     let mut mlfq = minios_scheduler::mlfq::MlfqScheduler::new();
     mlfq.add_task(Pid(10), Priority::HIGH);
     mlfq.add_task(Pid(11), Priority::LOW);
     mlfq.set_running(Pid(10), 0);
-    for _ in 0..50 {
+    for _ in 0..ticks {
         mlfq.tick();
     }
-    let mlfq_stats = mlfq.stats();
 
+    // Round-Robin
     let mut rr = minios_scheduler::round_robin::RoundRobinScheduler::new(5);
     rr.add_task(Pid(10));
     rr.add_task(Pid(11));
-    for _ in 0..50 {
+    for _ in 0..ticks {
         rr.tick();
     }
-    let rr_stats = rr.stats();
 
-    println!("After 50 ticks with 2 tasks:");
-    println!("  {:16} {:>10} {:>10}", "", "MLFQ", "Round-Robin");
+    // FIFO
+    let mut fifo = minios_scheduler::fifo::FifoScheduler::new();
+    fifo.add_task(Pid(10));
+    fifo.add_task(Pid(11));
+    for _ in 0..ticks {
+        fifo.tick();
+    }
+
+    // Priority
+    let mut prio = minios_scheduler::priority::PriorityScheduler::new();
+    prio.add_task(Pid(10), Priority::HIGH);
+    prio.add_task(Pid(11), Priority::LOW);
+    for _ in 0..ticks {
+        prio.tick();
+    }
+
     println!(
-        "  {:16} {:>10} {:>10}",
-        "Switches", mlfq_stats.total_switches, rr_stats.total_switches
+        "After {} ticks with 2 tasks (HIGH + LOW priority):",
+        ticks
+    );
+    println!("  {:12} {:>10} {:>10}", "", "Switches", "Fairness");
+    println!(
+        "  {:12} {:>10} {:>10}",
+        "MLFQ",
+        mlfq.stats().total_switches,
+        "Adaptive"
     );
     println!(
-        "  {:16} {:>10} {:>10}",
-        "Total ticks", mlfq_stats.total_ticks, rr_stats.total_ticks
+        "  {:12} {:>10} {:>10}",
+        "Round-Robin",
+        rr.stats().total_switches,
+        "Equal"
+    );
+    println!(
+        "  {:12} {:>10} {:>10}",
+        "FIFO",
+        fifo.stats().total_switches,
+        "None"
+    );
+    println!(
+        "  {:12} {:>10} {:>10}",
+        "Priority",
+        prio.stats().total_switches,
+        "Starves LOW"
     );
     println!();
-    println!("Observation: MLFQ switches more because high-priority tasks");
-    println!("have shorter time slices. Round-Robin treats all tasks equally.");
+    println!("Key insights:");
+    println!("  FIFO: 1 switch only (first task runs forever, no preemption)");
+    println!("  Priority: always picks HIGH, LOW starves completely");
+    println!("  RR: equal time for both, ignores priority differences");
+    println!("  MLFQ: adapts — HIGH gets more CPU but LOW isn't starved");
     println!();
-    println!("Trade-off:");
-    println!("  MLFQ   — responsive for interactive tasks, complex rules");
-    println!("  RR     — simple and fair, but no priority differentiation");
+    println!("This is why modern OS kernels use MLFQ or CFS, not FIFO/Priority.");
     println!();
     println!("✅ Lab complete!");
 }
