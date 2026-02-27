@@ -4,7 +4,11 @@ version = "0.1.0"
 edition = "2021"
 description = "Inter-process communication for MiniOS"
 
+[features]
+default = ["hal"]
+hal = ["dep:minios-hal"]
+
 [dependencies]
 minios-common = { path = "../common" }
-minios-hal = { path = "../hal" }
+minios-hal = { path = "../hal", optional = true }
 spin = { workspace = true }

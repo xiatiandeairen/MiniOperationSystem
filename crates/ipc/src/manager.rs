@@ -38,6 +38,7 @@ impl IpcManagerImpl {
 
     /// Sends a full [`Message`] to the specified queue.
     pub fn send_message(&mut self, queue: QueueId, msg: Message) -> Result<(), IpcError> {
+        #[cfg(feature = "hal")]
         minios_hal::klog!(
             Debug,
             "ipc",

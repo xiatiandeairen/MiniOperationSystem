@@ -7,6 +7,7 @@
 
 extern crate alloc;
 
+pub mod buddy;
 pub mod frame;
 pub mod heap;
 pub mod paging;

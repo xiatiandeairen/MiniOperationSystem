@@ -1,8 +1,15 @@
-//! Framebuffer text console — renders characters as pixels.
+//! Pixel framebuffer text console — renders bitmap font characters.
 //!
-//! The bootloader provides a pixel-based framebuffer (not VGA text mode).
-//! This module draws an 8×16 bitmap font onto that framebuffer, giving
-//! the appearance of a classic text console.
+//! This module implements an 8×16 bitmap font text console on top of
+//! a raw pixel framebuffer. It can be adapted for any system that provides
+//! a linear framebuffer (UEFI, bootloader, embedded display).
+//!
+//! ## Reuse Guide
+//! The core algorithm (font lookup + pixel drawing + scroll) is ~150 lines
+//! and depends only on a `&mut [u8]` framebuffer slice. To reuse:
+//! 1. Copy `font_glyph()` and `FONT_DATA`
+//! 2. Implement `put_pixel()` for your framebuffer format
+//! 3. Call `draw_char()` for each character
 
 use core::fmt;
 use spin::Mutex;

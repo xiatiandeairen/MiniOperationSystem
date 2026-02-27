@@ -90,6 +90,7 @@ pub fn create_kernel_task(
         .ok_or(ProcessError::MaxProcessesReached)?;
     table.slots[slot] = Some(proc);
 
+    #[cfg(feature = "hal")]
     minios_hal::klog!(
         Info,
         "process",
@@ -109,6 +110,7 @@ pub fn exit_current(_code: i32) {
             p.state = ProcessState::Terminated;
         }
     }
+    #[cfg(feature = "hal")]
     minios_hal::klog!(Info, "process", "process exited");
 }
 
