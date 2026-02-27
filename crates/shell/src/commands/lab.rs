@@ -27,6 +27,7 @@ pub fn cmd_lab(args: &[&str]) {
         "trace-overhead" | "4" => lab_trace_overhead(),
         "fs-operations" | "5" => lab_fs_operations(),
         "scheduler-compare" | "6" => lab_scheduler_compare(),
+        "allocator-compare" | "7" => lab_allocator_compare(),
         _ => println!("Unknown lab. Type 'lab list' to see available labs."),
     }
     if args[0] != "list" {
@@ -43,6 +44,7 @@ fn lab_list() {
     println!("  4. trace-overhead      — Measure the cost of tracing");
     println!("  5. fs-operations       — Create, write, read, delete a file");
     println!("  6. scheduler-compare   — Compare MLFQ vs Round-Robin algorithms");
+    println!("  7. allocator-compare   — Compare Bitmap vs Buddy System allocators");
     println!();
     println!("Run a lab: lab <name>  or  lab <number>");
 }
@@ -325,6 +327,65 @@ fn lab_fs_operations() {
     println!("  → A small integer (index) into a per-process table of open files.");
     println!("  → It maps to an inode + current read/write offset.");
     println!("  → Closing releases the table entry for reuse.");
+    println!();
+    println!("✅ Lab complete!");
+}
+
+fn lab_allocator_compare() {
+    println!("=== Lab: Allocator Algorithm Comparison ===");
+    println!();
+
+    let bitmap_start = minios_hal::cpu::read_tsc();
+    let mem = minios_memory::get_stats();
+    let bitmap_end = minios_hal::cpu::read_tsc();
+
+    let buddy_start = minios_hal::cpu::read_tsc();
+    let mut buddy = minios_memory::buddy::BuddyAllocator::new(1024);
+    for _ in 0..100 {
+        buddy.allocate(0);
+    }
+    let buddy_end = minios_hal::cpu::read_tsc();
+
+    println!("Bitmap Allocator (real):");
+    println!(
+        "  Total: {} frames, Free: {}",
+        mem.total_frames, mem.free_frames
+    );
+    println!("  Stats read: {} cycles", bitmap_end - bitmap_start);
+    println!();
+    println!("Buddy Allocator (simulated, 1024 frames):");
+    println!(
+        "  100 single-frame allocs: {} cycles",
+        buddy_end - buddy_start
+    );
+    println!(
+        "  Allocated: {}, Free: {}",
+        buddy.allocated_frames(),
+        buddy.free_frames()
+    );
+    println!();
+    println!("Comparison:");
+    println!("  {:16} {:>12} {:>12}", "", "Bitmap", "Buddy");
+    println!(
+        "  {:16} {:>12} {:>12}",
+        "Alloc speed", "O(n) scan", "O(log n) split"
+    );
+    println!(
+        "  {:16} {:>12} {:>12}",
+        "Free speed", "O(1)", "O(log n) merge"
+    );
+    println!(
+        "  {:16} {:>12} {:>12}",
+        "Fragmentation", "External", "Internal (2^n)"
+    );
+    println!(
+        "  {:16} {:>12} {:>12}",
+        "Memory overhead", "1 bit/frame", "Free lists"
+    );
+    println!();
+    println!("Linux uses Buddy for page frames because O(log n) allocation");
+    println!("is critical when thousands of pages are allocated per second.");
+    println!("MiniOS uses Bitmap because it's simpler and our frame count is small.");
     println!();
     println!("✅ Lab complete!");
 }
