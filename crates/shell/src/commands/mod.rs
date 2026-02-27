@@ -245,6 +245,11 @@ static COMMANDS: &[Command] = &[
         handler: proc_cmds::cmd_top,
     },
     Command {
+        name: "watch",
+        description: "Repeat a command at intervals (watch <cmd> [count])",
+        handler: proc_cmds::cmd_watch,
+    },
+    Command {
         name: "bench",
         description: "Run built-in performance benchmarks (alloc, trace, fs)",
         handler: bench::cmd_bench,
