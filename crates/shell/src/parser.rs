@@ -1,4 +1,10 @@
-//! Command-line parser for the shell.
+//! Minimal command-line parser for `no_std` environments.
+//!
+//! Splits an input line into command name + arguments by whitespace.
+//! Supports up to 16 tokens. No quoting or escaping.
+//!
+//! This parser is a self-contained, allocation-free component that
+//! could be extracted into its own crate for embedded shells.
 
 /// Maximum number of arguments (including the command name).
 const MAX_ARGS: usize = 16;
