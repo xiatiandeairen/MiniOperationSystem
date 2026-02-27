@@ -3,6 +3,14 @@ extern crate alloc;
 use minios_common::traits::trace::Tracer;
 use minios_hal::{cpu::read_tsc, println};
 
+/// Runs built-in performance benchmarks.
+///
+/// ```text
+/// bench           — list available benchmarks
+/// bench alloc     — heap allocation speed
+/// bench trace     — trace span overhead
+/// bench fs        — file create/write/read/delete cycle
+/// ```
 pub fn cmd_bench(args: &[&str]) {
     if args.is_empty() {
         bench_list();
@@ -60,11 +68,21 @@ fn bench_fs() {
     };
     let start = read_tsc();
     for _ in 0..100u32 {
-        let fd = vfs
-            .open("/tmp/bench", OpenFlags::CREATE | OpenFlags::WRITE)
-            .unwrap();
-        vfs.write(fd, b"benchmark data").unwrap();
-        vfs.close(fd).unwrap();
+        let fd = match vfs.open("/tmp/bench", OpenFlags::CREATE | OpenFlags::WRITE) {
+            Ok(fd) => fd,
+            Err(e) => {
+                crate::commands::errors::show_error("bench", &alloc::format!("open: {:?}", e));
+                return;
+            }
+        };
+        if let Err(e) = vfs.write(fd, b"benchmark data") {
+            crate::commands::errors::show_error("bench", &alloc::format!("write: {:?}", e));
+            return;
+        }
+        if let Err(e) = vfs.close(fd) {
+            crate::commands::errors::show_error("bench", &alloc::format!("close: {:?}", e));
+            return;
+        }
         vfs.unlink("/tmp/bench").ok();
     }
     drop(vfs_guard);

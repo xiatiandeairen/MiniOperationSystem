@@ -319,6 +319,26 @@ static COMMANDS: &[Command] = &[
         description: "Answer common learner questions",
         handler: basic::cmd_faq,
     },
+    Command {
+        name: "feedback",
+        description: "Show feedback prompt and session summary",
+        handler: basic::cmd_feedback,
+    },
+    Command {
+        name: "stats",
+        description: "Show session statistics (commands, progress, uptime)",
+        handler: basic::cmd_stats,
+    },
+    Command {
+        name: "syscall_demo",
+        description: "Explain and demo the int 0x80 syscall mechanism",
+        handler: basic::cmd_syscall_demo,
+    },
+    Command {
+        name: "trap",
+        description: "Trigger int 0x80 to prove IDT dispatch works",
+        handler: basic::cmd_trap,
+    },
 ];
 
 /// Finds a command by name.

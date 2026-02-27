@@ -4,6 +4,14 @@ extern crate alloc;
 
 use minios_hal::println;
 
+/// Presents OS knowledge quiz questions on a chosen topic.
+///
+/// ```text
+/// quiz            — list available topics
+/// quiz process    — process management Q&A
+/// quiz memory     — memory management Q&A
+/// quiz fs         — filesystem Q&A
+/// ```
 pub fn cmd_quiz(args: &[&str]) {
     let topic = if args.is_empty() { "all" } else { args[0] };
     match topic {
@@ -67,6 +75,13 @@ fn quiz_fs() {
     println!("Verify with: ls, cat, explain ls, explain cat");
 }
 
+/// Presents verifiable learning challenges the user can attempt.
+///
+/// ```text
+/// challenge create-file   — create a file, write to it, verify
+/// challenge find-pid      — find the busiest process
+/// challenge memory-check  — check system memory stats
+/// ```
 pub fn cmd_challenge(args: &[&str]) {
     if args.is_empty() {
         challenge_list();

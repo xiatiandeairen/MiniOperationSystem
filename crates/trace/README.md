@@ -37,10 +37,34 @@ let mut writer = SerialJsonWriter;
 export_json(&mut writer, &out[..n]).ok();
 ```
 
+## Standalone Usage (no OS required)
+
+Add to your `Cargo.toml`:
+```toml
+[dependencies]
+minios-trace = { version = "0.1", default-features = false }
+```
+
+```rust
+use minios_trace::{trace_span, TRACER};
+
+fn my_function() {
+    let _span = trace_span!("my_op", module = "app");
+    // ... your code ...
+}
+
+// Read recorded spans:
+let mut buf = [minios_trace::Span::default(); 10];
+let n = TRACER.read_recent(10, &mut buf);
+```
+
+When the `hal` feature is disabled, `SerialJsonWriter` is not available.
+You can still call `export_json` with any `core::fmt::Write` implementation.
+
 ## Dependencies
 
 - `minios-common` — shared types (`TraceId`, `SpanId`, `SpanStatus`, `Tracer` trait)
-- `minios-hal` — serial port output (used only by `SerialJsonWriter`)
+- `minios-hal` *(optional, default)* — serial port output (used only by `SerialJsonWriter`)
 - `spin` — mutex for ring buffer and context stack
 
 ## Design Notes

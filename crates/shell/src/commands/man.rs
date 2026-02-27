@@ -2,6 +2,12 @@
 
 use minios_hal::println;
 
+/// Displays a quick usage reference for a given command.
+///
+/// ```text
+/// man ls      — show ls usage
+/// man crash   — show crash usage
+/// ```
 pub fn cmd_man(args: &[&str]) {
     if args.is_empty() {
         println!("Usage: man <command>");

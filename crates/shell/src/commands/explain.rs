@@ -2,6 +2,15 @@
 
 use minios_hal::println;
 
+/// Explains how a command works internally, without executing it.
+///
+/// ```text
+/// explain ls        — VFS inode walk
+/// explain cat       — open/read/close lifecycle
+/// explain ps        — process table iteration
+/// explain meminfo   — frame allocator + heap stats
+/// explain trace     — span ring buffer
+/// ```
 pub fn cmd_explain(args: &[&str]) {
     if args.is_empty() {
         println!("Usage: explain <command>");
@@ -19,6 +28,7 @@ pub fn cmd_explain(args: &[&str]) {
         "pagetable" => explain_pagetable(),
         "frames" => explain_frames(),
         "log" => explain_log(),
+        "syscall_demo" | "trap" => explain_syscall_mechanism(),
         "top" | "bench" | "syllabus" | "snapshot" | "version" | "man" | "pstree" | "memmap" => {
             println!("Use 'man {}' for usage information.", args[0]);
             println!("Use 'compare' or 'lab' for deeper learning.");
@@ -155,6 +165,24 @@ fn explain_frames() {
     println!("allocate_frame(): scan bitmap for first clear bit, set it.");
     println!("deallocate_frame(): check bit is set, then clear it.");
     println!("  (Double-free is detected and returns an error.)");
+}
+
+fn explain_syscall_mechanism() {
+    println!("=== How System Calls Work ===");
+    println!();
+    println!("A system call is a controlled entry point into the kernel.");
+    println!("User programs can't directly access kernel code or data.");
+    println!("Instead, they 'trap' into the kernel via a special instruction.");
+    println!();
+    println!("x86-64 mechanisms:");
+    println!("  int 0x80  \u{2014} legacy software interrupt (slower)");
+    println!("  syscall   \u{2014} dedicated instruction (faster, uses MSR)");
+    println!();
+    println!("The 'trap' command demonstrates int 0x80:");
+    println!("  1. CPU pushes stack frame (RIP, RSP, RFLAGS)");
+    println!("  2. Looks up IDT entry 0x80 \u{2192} jumps to our handler");
+    println!("  3. Handler runs in Ring 0 (full kernel privileges)");
+    println!("  4. Handler returns via IRET instruction");
 }
 
 fn explain_log() {

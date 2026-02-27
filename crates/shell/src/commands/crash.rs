@@ -4,6 +4,15 @@ extern crate alloc;
 use alloc::vec::Vec;
 use minios_hal::println;
 
+/// Runs safe fault-demonstration scenarios for learning.
+///
+/// ```text
+/// crash oom          — exhaust heap memory and recover
+/// crash stack        — simulated stack overflow explanation
+/// crash divide-zero  — division-by-zero exception walkthrough
+/// crash null-deref   — null pointer dereference walkthrough
+/// crash fork-bomb    — rapid process creation until limit
+/// ```
 pub fn cmd_crash(args: &[&str]) {
     if args.is_empty() {
         crash_list();

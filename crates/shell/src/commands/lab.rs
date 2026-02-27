@@ -4,6 +4,16 @@ extern crate alloc;
 
 use minios_hal::println;
 
+/// Runs interactive OS learning experiments.
+///
+/// ```text
+/// lab list                 — show available labs
+/// lab scheduler-fairness   — compare CPU time across priorities
+/// lab memory-usage         — observe heap allocation effects
+/// lab page-table-walk      — manually translate a virtual address
+/// lab trace-overhead       — measure the cost of tracing
+/// lab fs-operations        — create, write, read, delete a file
+/// ```
 pub fn cmd_lab(args: &[&str]) {
     if args.is_empty() {
         lab_list();

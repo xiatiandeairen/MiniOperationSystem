@@ -10,6 +10,7 @@ minios-hal = { path = "../hal" }
 minios-fs = { path = "../fs" }
 minios-process = { path = "../process" }
 minios-scheduler = { path = "../scheduler" }
+minios-syscall = { path = "../syscall" }
 minios-trace = { path = "../trace" }
 minios-memory = { path = "../memory" }
 spin = { workspace = true }
