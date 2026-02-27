@@ -144,6 +144,7 @@ impl MlfqScheduler {
     fn preempt_current(&mut self) -> ScheduleDecision {
         let entry = self.current.take().unwrap();
         let new_q = (entry.queue + 1).min(NUM_QUEUES - 1);
+        #[cfg(feature = "hal")]
         minios_hal::klog!(
             Debug,
             "scheduler",
@@ -171,6 +172,7 @@ impl MlfqScheduler {
     /// each PID exists in exactly one queue at a time.
     fn boost_all(&mut self) {
         self.ticks_since_boost = 0;
+        #[cfg(feature = "hal")]
         minios_hal::klog!(
             Info,
             "scheduler",
