@@ -82,15 +82,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "minios-interrupt"
-version = "0.1.0"
-dependencies = [
- "minios-common",
- "spin",
- "x86_64",
-]
-
-[[package]]
 name = "minios-ipc"
 version = "0.1.0"
 dependencies = [
@@ -107,7 +98,6 @@ dependencies = [
  "minios-common",
  "minios-fs",
  "minios-hal",
- "minios-interrupt",
  "minios-ipc",
  "minios-memory",
  "minios-process",
