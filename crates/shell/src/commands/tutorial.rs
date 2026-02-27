@@ -2,6 +2,11 @@
 
 use minios_hal::println;
 
+/// Prints a guided 10-step walkthrough introducing MiniOS features.
+///
+/// ```text
+/// tutorial   — display the interactive tutorial
+/// ```
 pub fn cmd_tutorial(_args: &[&str]) {
     println!();
     println!("========================================");

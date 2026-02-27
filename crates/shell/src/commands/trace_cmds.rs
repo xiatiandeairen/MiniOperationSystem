@@ -39,6 +39,16 @@ fn describe_span(name: &str) -> &'static str {
 }
 
 /// Dispatches trace sub-commands.
+///
+/// ```text
+/// trace list            — show 10 most recent spans
+/// trace tree            — show spans as an indented tree
+/// trace stats           — show buffer statistics
+/// trace clear           — clear the trace buffer
+/// trace export          — export spans as JSON to serial port
+/// trace follow <cmd>    — clear, execute command, then show its spans
+/// trace filter <module> — restrict output to one module
+/// ```
 pub fn cmd_trace(args: &[&str]) {
     let sub = if args.is_empty() { "help" } else { args[0] };
 

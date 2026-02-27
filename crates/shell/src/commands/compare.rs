@@ -2,6 +2,15 @@
 
 use minios_hal::println;
 
+/// Compares MiniOS design choices against industry operating systems.
+///
+/// ```text
+/// compare scheduler   — MLFQ vs CFS
+/// compare memory      — bitmap vs buddy system
+/// compare filesystem  — RamFS vs ext4
+/// compare ipc         — message queue vs pipes/sockets/shm
+/// compare syscall     — direct call vs int 0x80
+/// ```
 pub fn cmd_compare(args: &[&str]) {
     if args.is_empty() {
         println!("Usage: compare <topic>");

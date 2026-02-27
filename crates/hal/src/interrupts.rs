@@ -45,6 +45,17 @@ impl InterruptIndex {
     }
 }
 
+/// System call interrupt vector (legacy int 0x80).
+pub const SYSCALL_VECTOR: u8 = 0x80;
+
+/// Counter for int 0x80 software interrupt traps.
+static SYSCALL_TRAP_COUNT: AtomicU64 = AtomicU64::new(0);
+
+/// Returns the number of int 0x80 syscall traps since boot.
+pub fn syscall_trap_count() -> u64 {
+    SYSCALL_TRAP_COUNT.load(Ordering::Relaxed)
+}
+
 /// Monotonic tick counter incremented by the timer interrupt handler.
 static TICK_COUNT: AtomicU64 = AtomicU64::new(0);
 
@@ -115,6 +126,7 @@ static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
 
     idt[InterruptIndex::Timer.as_u8()].set_handler_fn(timer_handler);
     idt[InterruptIndex::Keyboard.as_u8()].set_handler_fn(keyboard_handler);
+    idt[SYSCALL_VECTOR].set_handler_fn(syscall_trap_handler);
 
     idt
 });
@@ -193,4 +205,10 @@ extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame) {
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
     }
+}
+
+// ── Software Interrupt Handlers ─────────────────────────────────────
+
+extern "x86-interrupt" fn syscall_trap_handler(_stack_frame: InterruptStackFrame) {
+    SYSCALL_TRAP_COUNT.fetch_add(1, Ordering::Relaxed);
 }
