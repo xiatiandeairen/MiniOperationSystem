@@ -9,8 +9,11 @@ use core::fmt::Write;
 /// A [`Write`] adapter that sends output directly to the serial port.
 ///
 /// Used by Shell `trace export` to dump JSON spans to a host-side capture.
+/// Only available when the `hal` feature is enabled.
+#[cfg(feature = "hal")]
 pub struct SerialJsonWriter;
 
+#[cfg(feature = "hal")]
 impl Write for SerialJsonWriter {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         minios_hal::serial::_serial_print(format_args!("{}", s));
