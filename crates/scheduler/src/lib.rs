@@ -9,6 +9,7 @@ extern crate alloc;
 
 pub mod fifo;
 pub mod mlfq;
+pub mod priority;
 pub mod round_robin;
 
 pub use mlfq::MlfqScheduler;
